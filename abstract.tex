@@ -3,8 +3,9 @@
 \usepackage[utf8]{inputenc}
 \usepackage[spanish]{babel}
 
+\usepackage{Sweave}
 \begin{document}
-\SweaveOpts{concordance=TRUE}
+\input{abstract-concordance}
 
 \title{metR - An R package for meteorological fields}
 
@@ -31,42 +32,6 @@
 % \end{abstract}
 
 
-<<setup, echo = FALSE, include = FALSE>>=
-knitr::opts_chunk$set(cache = FALSE,
-                      message = FALSE,
-                      warning = FALSE,
-                      fig.width = 4)
-knitr::opts_knit$set(self.contained = FALSE)
-   
-knitr::write_bib(c("base", "data.table", "ggplot2", "metR"), 
-                 file = "packages.bib")
-library(metR)
-library(data.table)
-library(ggplot2)
-library(dplyr)
-library(purrr)
-data(geopotential)
-geopotential <- copy(geopotential)
-
-# Opciones estéticas de ggplot2 que sirven al graficar campos escalares. 
-theme_field <- function(w = 4) {
-   theme(legend.position = "bottom", legend.box = "vertical",
-         legend.key.width = unit(w, "lines"),
-         panel.grid = element_line(color = "gray20", size = 0.2, linetype = 3),
-         panel.ontop = TRUE
-   )
-}
-
-# Mapa.
-map <- map_data("legacy_world2")
-geom_map <- geom_path(data = map, aes(long, lat, group = group), color = "black", size = 0.2) 
-invisible({
-geopotential[, gh.t := Anomaly(gh), by = .(lon, lat, month(date))]
-geopotential[, gh.t.w := gh.t*sqrt(cos(lat*pi/180))]
-eof <- geopotential[, EOF(gh.t.w ~ date | lon + lat, n = 1)$right, by = .(month(date))]
-eof[, c("u", "v") := GeostrophicWind(gh.t.w, lon, lat), by = .(month)]})
-month.lab <- setNames(month.abb, as.character(1:12))
-@
 
 
 \section{Introducción}
@@ -84,29 +49,34 @@ Como ejemplo, se usan los datos de altura geopotencial media mensual en el nivel
 
 Se calculan las anomalías temporales para cada puntos de grilla y calcular el campo asociado a la primera componente principal para cada mes. Finalmente, se calcula el viento geostrófico correspondiente a ese campo. Todo este proceso toma unas pocas líneas de código y se integra sin esfuerzo en el \emph{workflow} de \texttt{data.table}. 
 
-<<data1, eval = FALSE, prompt = FALSE>>=
-geopotential[, gh.t := Anomaly(gh), by = .(lon, lat, month(date))]
-geopotential[, gh.t.w := gh.t*sqrt(cos(lat*pi/180))]
-eof <- geopotential[, EOF(gh.t.w ~ date | lon + lat, n = 1)$right, by = .(month(date))]
-eof[, c("u", "v") := GeostrophicWind(gh.t.w, lon, lat), by = .(month)]
-@
+\begin{Schunk}
+\begin{Sinput}
+> geopotential[, gh.t := Anomaly(gh), by = .(lon, lat, month(date))]
+> geopotential[, gh.t.w := gh.t*sqrt(cos(lat*pi/180))]
+> eof <- geopotential[, EOF(gh.t.w ~ date | lon + lat, n = 1)$right, by = .(month(date))]
+> eof[, c("u", "v") := GeostrophicWind(gh.t.w, lon, lat), by = .(month)]
+\end{Sinput}
+\end{Schunk}
 
 
 Luego, se grafica el campo de geopotencial con contornos llenos de manera que haya una relación uno a uno entre los niveles graficados y los señalados en la escala de colores. El campo de movimiento, por su parte, se grafica con líneas de corriente. 
 
-<<example-plot, fig.heigth = 3, fig = TRUE, fig.cap = "sdfds", prompt=FALSE>>=
-binwidth <- 0.01
-ggplot(eof[month %in% 1], aes(lon, lat)) +
-   geom_contour_fill(aes(z = gh.t.w), circular = "x", 
-                     breaks = AnchorBreaks(0, binwidth, 0)) +
-   geom_streamline(aes(dx = dlon(u, lat), dy = dlat(v)), L = 30, 
-                   skip = 2) +
-   scale_fill_divergent(breaks = AnchorBreaks(0, binwidth, 0), 
-                        guide = "colorstrip", name = "") +
-   scale_y_latitude(ticks = 15) + scale_x_longitude() + geom_map +
-   coord_quickmap(xlim = c(0, 360), ylim = c(-90, -20)) +
-   theme_minimal() + theme_field()
-@
+\begin{Schunk}
+\begin{Sinput}
+> binwidth <- 0.01
+> ggplot(eof[month %in% 1], aes(lon, lat)) +
++    geom_contour_fill(aes(z = gh.t.w), circular = "x", 
++                      breaks = AnchorBreaks(0, binwidth, 0)) +
++    geom_streamline(aes(dx = dlon(u, lat), dy = dlat(v)), L = 30, 
++                    skip = 2) +
++    scale_fill_divergent(breaks = AnchorBreaks(0, binwidth, 0), 
++                         guide = "colorstrip", name = "") +
++    scale_y_latitude(ticks = 15) + scale_x_longitude() + geom_map +
++    coord_quickmap(xlim = c(0, 360), ylim = c(-90, -20)) +
++    theme_minimal() + theme_field()
+\end{Sinput}
+\end{Schunk}
+\includegraphics{abstract-example-plot}
 
 \section{Limitaciones}
 
