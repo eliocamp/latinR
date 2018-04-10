@@ -4,15 +4,14 @@
 \usepackage[spanish]{babel}
 
 \begin{document}
-\SweaveOpts{concordance=TRUE}
 
-\title{metR - An R package for meteorological fields}
+\title{metR - Visualización y manejo de campos meteorológicos}
 
 %\titlerunning{Abbreviated paper title}
 % If the paper title is too long for the running head, you can set
 % an abbreviated paper title here
 %
-\author{Elio Campitelli\inst{1}}
+\author{Elio Campitelli}
 
 %
 \authorrunning{E. Campitelli}
@@ -24,15 +23,15 @@
     %\url{http://www.springer.com/gp/computer-science/lncs}
     }
 %
-\maketitle              % typeset the header of the contribution
+\maketitle              % typeset the header of the contributions
 %
 % \begin{abstract}
-\keywords{meteorología  \and data \and Another keyword.}
+\keywords{meteorología \and visualización \and }
 % \end{abstract}
 
 
 <<setup, echo = FALSE, include = FALSE>>=
-knitr::opts_chunk$set(cache = FALSE,
+knitr::opts_chunk$set(cache = TRUE,
                       message = FALSE,
                       warning = FALSE,
                       fig.width = 4)
@@ -60,41 +59,27 @@ theme_field <- function(w = 4) {
 # Mapa.
 map <- map_data("legacy_world2")
 geom_map <- geom_path(data = map, aes(long, lat, group = group), color = "black", size = 0.2) 
-invisible({
-geopotential[, gh.t := Anomaly(gh), by = .(lon, lat, month(date))]
-geopotential[, gh.t.w := gh.t*sqrt(cos(lat*pi/180))]
-eof <- geopotential[, EOF(gh.t.w ~ date | lon + lat, n = 1)$right, by = .(month(date))]
-eof[, c("u", "v") := GeostrophicWind(gh.t.w, lon, lat), by = .(month)]})
-month.lab <- setNames(month.abb, as.character(1:12))
 @
 
+Gran parte de la investigación en ciencias de la atmósfera consiste en el análisis y visualización de datos. Un software de visualización de datos meteorológicos y oceanográficos muy utilizado es GrADs (Grid Analysis and Display System) el cual permite leer y graficar campos escalares y vectoriales con gran facilidad. Sin emabrgo, su lenguaje de scripting es muy limitado, carece de capacidades estadísticas nativas y no existen gran cantidad de extensiones que las implementen. R, en cambio, posee implementaciones de virtualmente cualquier tratamiento estadístico usado en ciencias de la atmósfera y el paquete \texttt{raster} que permite leer y graficar datos geográficos con relativa facilidad. Sin embargo por su naturaleza, los datos quedan relativamente ocultos detrás de una estructura opaca que no facilita la interacción con otros paquetes; en particular, no es posible graficar utilizando \texttt{ggplot2}. 
 
-\section{Introducción}
+La finalidad de \texttt{metR} es proveer facilidades en la lectura, manejo y visualización de datos meteorológicos en R utilizando estructuras comunes soportadas por la mayoría de los paquetes, de manera de poder beneficiarse de los aportes de la comunidad. Hace fuerte uso de \texttt{data.table} por su eficiencia en memoria y velocidad dada la gran cantidad de datos que suelen usarse en meteorología, y en \texttt{ggplot2} por su flexibilidad y facilidad en la creación de gráficos. 
 
 
-Gran parte de la investigación en ciencias de la atmósfera consiste en el análisis y visualización de datos.
+\textbf{Ejemplo}. Se calculan las anomalías temporales para cada puntos de grilla y calcular el campo asociado a la primera componente principal para cada mes. Finalmente, se calcula el viento geostrófico correspondiente a ese campo. Todo este proceso toma unas pocas líneas de código y se integra sin esfuerzo en el \emph{workflow} de \texttt{data.table}. 
 
-Un software de visualización de datos meteorológicos y oceanográficos muy utilizado es GrADs (Grid Analysis and Display System) el cual permite leer y graficar campos escalares y vectoriales con gran facilidad. Sin emabrgo, su lenguaje de scripting es muy limitado, carece de capacidades estadísticas nativas y no existen gran cantidad de extensiones que las implementen. R, en cambio, posee implementaciones de virtualmente cualquier tratamiento estadístico usado en ciencias de la atmósfera y el paquete \texttt{raster} que permite leer y graficar datos geográficos con relativa facilidad, pero por su naturaleza los datos quedan opacados detrás de una estructura complicada que no es fácil hacer interactuar con otros paquetes; en particular, no es posible graficar utilizando \texttt{ggplot2}. 
-
-La finalidad de \texttt{metR} es proveer facilidades en la lectura, manejo y visualización de datos meteorológicos en R utilizando estructuras comunes soportadas por la mayoría de los paquetes, de manera de poder beneficiarse de los aportes de la comunidad. Hace fuerte uso de `data.table` por su eficiencia en memoria y velocidad dada la gran cantidad de datos que suelen usarse en meteorología, y en \texttt{ggplot2} por su flexibilidad y facilidad en la creación de gráficos. 
-
-\section{Ejemplo}
-
-Como ejemplo, se usan los datos de altura geopotencial media mensual en el nivel de 700hPa entre 1990 y 2000, que vienen incluidos en `metR`. 
-
-Se calculan las anomalías temporales para cada puntos de grilla y calcular el campo asociado a la primera componente principal para cada mes. Finalmente, se calcula el viento geostrófico correspondiente a ese campo. Todo este proceso toma unas pocas líneas de código y se integra sin esfuerzo en el \emph{workflow} de \texttt{data.table}. 
-
-<<data1, eval = FALSE, prompt = FALSE>>=
+<<data1>>=
 geopotential[, gh.t := Anomaly(gh), by = .(lon, lat, month(date))]
 geopotential[, gh.t.w := gh.t*sqrt(cos(lat*pi/180))]
-eof <- geopotential[, EOF(gh.t.w ~ date | lon + lat, n = 1)$right, by = .(month(date))]
-eof[, c("u", "v") := GeostrophicWind(gh.t.w, lon, lat), by = .(month)]
+eof <- geopotential[, EOF(gh.t.w ~ date | lon + lat, n = 1)$right, 
+                    by = .(month(date))]
+eof[, c("u", "v") := GeostrophicWind(gh.t.w, lon, lat), 
+    by = .(month)]
 @
-
 
 Luego, se grafica el campo de geopotencial con contornos llenos de manera que haya una relación uno a uno entre los niveles graficados y los señalados en la escala de colores. El campo de movimiento, por su parte, se grafica con líneas de corriente. 
 
-<<example-plot, fig.heigth = 3, fig = TRUE, fig.cap = "sdfds", prompt=FALSE>>=
+<<example-plot, fig.cap = "Anomalía de altura geopotencial media en contornos llenos (mgp) y viento geostrófico en líneas de corriente.", fig.height = 3.5, fig.width = 7.5>>=
 binwidth <- 0.01
 ggplot(eof[month %in% 1], aes(lon, lat)) +
    geom_contour_fill(aes(z = gh.t.w), circular = "x", 
@@ -108,11 +93,12 @@ ggplot(eof[month %in% 1], aes(lon, lat)) +
    theme_minimal() + theme_field()
 @
 
-\section{Limitaciones}
 
-El uso de `data.table`s para el manejo de datos implica una importante limitación para \texttt{metR}. Muchas aplicaciones meteorológicas hacen uso de cantidades de datos que resultan imposibles cargar en memoria RAM en la mayoría de las computadoras personales. \texttt{metR} tampoco puede manejar campos que no se encuentren en en grillas regulares o en grillas proyectadas. En ambos casos paquetes como \texttt{raster} y \texttt{rasterVis} son indispensables. 
-
-\texttt{metR} está en estado experimental y de activo desarrollo, tanto en crecimiento de funcionalidad como en refinamiento de interfaces y corrección de errores. Como todo proyecto de código abierto, es deseable además que a medida que sea adoptado por la comunidad, surgan nuevos casos de uso que incentiven su evolución más allá de las necesidades personales de un sólo desarrollador. 
+% \section{Limitaciones}
+% 
+% El uso de `data.table`s para el manejo de datos implica una importante limitación para \texttt{metR}. Muchas aplicaciones meteorológicas hacen uso de cantidades de datos que resultan imposibles cargar en memoria RAM en la mayoría de las computadoras personales. \texttt{metR} tampoco puede manejar campos que no se encuentren en en grillas regulares o en grillas proyectadas. En ambos casos paquetes como \texttt{raster} y \texttt{rasterVis} son indispensables. 
+% 
+% \texttt{metR} está en estado experimental y de activo desarrollo, tanto en crecimiento de funcionalidad como en refinamiento de interfaces y corrección de errores. Como todo proyecto de código abierto, es deseable además que a medida que sea adoptado por la comunidad, surgan nuevos casos de uso que incentiven su evolución más allá de las necesidades personales de un sólo desarrollador. 
 
 
 \end{document}
