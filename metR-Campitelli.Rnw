@@ -46,8 +46,8 @@ knitr::opts_knit$set(self.contained = FALSE)
 # knitr::write_bib(c("base", "data.table", "ggplot2", "metR", "raster"), 
 #                  file = "packages.bib")
 
-hook_source = knit_hooks$get('source')
-knit_hooks$set(source = function(x, options) {
+hook_source = knitr::knit_hooks$get('source')
+knitr::knit_hooks$set(source = function(x, options) {
    txt = hook_source(x, options)
    # extend the default source hook
    gsub('~', '\\\\mytilde', txt)
@@ -79,11 +79,11 @@ geom_map <- geom_path(data = map, aes(long, lat, group = group), color = "black"
 
 \section{Introducción}
 
-Gran parte de la investigación en ciencias de la atmósfera consiste en el análisis y visualización de datos. Uno de los softwares de visualización de datos más utilizado por la comunidad meteorológica y oceanográfica es GrADS (Grid Analysis and Display System), el cual permite leer y graficar campos escalares y vectoriales con gran facilidad. Sin embargo, su lenguaje de scripting es muy limitado, carece de capacidades estadísticas nativas y no existen muchas extensiones que las implementen. R, en cambio, posee implementaciones de virtualmente cualquier tratamiento estadístico usado en ciencias de la atmósfera. Sin embargo, con el paquete \texttt{raster}\cite{R-raster} --el más usado para leer y graficar datos geográficos-- los datos quedan relativamente ocultos detrás de una estructura opaca que no facilita la interacción con otros paquetes; en particular, no es posible graficarlos utilizando \texttt{ggplot2}\cite{R-ggplot2}. 
+Gran parte de la investigación en ciencias de la atmósfera consiste en el análisis y visualización de datos. Uno de los softwares de visualización de datos más utilizado por la comunidad meteorológica y oceanográfica es GrADS (Grid Analysis and Display System), el cual permite leer y graficar campos escalares y vectoriales con gran facilidad. Sin embargo, su lenguaje de scripting es muy limitado, carece de capacidades estadísticas nativas y no existen muchas extensiones que las implementen. R, en cambio, posee implementaciones de virtualmente cualquier tratamiento estadístico usado en ciencias de la atmósfera. 
 
 \section{Descripción del paquete}
 
-La finalidad de \texttt{metR}\cite{R-metR} es proveer facilidades en la lectura, manejo y visualización de datos meteorológicos en R utilizando estructuras comunes soportadas por la mayoría de los paquetes, de manera de poder beneficiarse de los aportes de la comunidad. Hace fuerte uso de \texttt{data.table}\cite{R-data.table} por su velocidad y eficiencia en el uso de memoria (importante dada la gran cantidad de datos que suelen usarse en meteorología), y en \texttt{ggplot2} por su flexibilidad y facilidad en la creación de gráficos. 
+La finalidad de \texttt{metR} es proveer facilidades en la lectura, manejo y visualización de datos meteorológicos en R utilizando estructuras comunes soportadas por la mayoría de los paquetes, de manera de poder beneficiarse de los aportes de la comunidad. Hace fuerte uso de \texttt{data.table}por su velocidad y eficiencia en el uso de memoria (importante dada la gran cantidad de datos que suelen usarse en meteorología), y en \texttt{ggplot2} por su flexibilidad y facilidad en la creación de gráficos. 
 
 En su extensión de \texttt{ggplot2}, \texttt{metR} provee \texttt{geoms} para graficar contornos llenos, contornos de Tanaka, líneas de corriente, vectores y mapas de relieve, y escalas específicas que facilitan la creación de mapas y cortes verticales. En lo que refiere a manejo de datos, provee funciones para lectura datos desde archivos NetCDF directamente en \texttt{data.frames}, cálculo de componentes principales, imputación de datos faltantes, transformada de Fourier y derivadas. Además, tiene funciones específicas de física atmosférica, como la ley de gases ideales, relaciones de procesos adiabáticos, presión de saturación del vapor de agua, fuerza de coriolis y otros.
 
@@ -91,17 +91,14 @@ En su extensión de \texttt{ggplot2}, \texttt{metR} provee \texttt{geoms} para g
 
 \textbf{Ejemplo}. Se calculan las anomalías temporales de altura geopotencial para cada punto de grilla y luego se obtiene el campo asociado a la primera componente principal para cada mes. Finalmente, se calcula el viento geostrófico correspondiente a ese campo. Todo este proceso toma unas pocas líneas de código y se integra sin esfuerzo en el \emph{workflow} de \texttt{data.table}. 
 
-<<data1>>=
+
+<<example-plot, fig.cap = "Anomalía de altura geopotencial media en contornos llenos (mgp) y viento geostrófico en líneas de corriente.", fig.height = 3.5, fig.width = 7.5>>=
 geopotential[, gh.t := Anomaly(gh), by = .(lon, lat, month(date))]
 geopotential[, gh.t.w := gh.t*sqrt(cos(lat*pi/180))]
 eof <- geopotential[, EOF(gh.t.w ~ date | lon + lat, n = 1)$right, 
                     by = month(date)]
 eof[, c("u", "v") := GeostrophicWind(gh.t.w, lon, lat), by = month]
-@
 
-Luego, se grafica el campo de geopotencial con contornos llenos y el campo de movimiento en líneas de corriente. Las etiquetas en la escala de colores se marcan con el mismo intervalo usado en la discretización de los contornos. 
-
-<<example-plot, fig.cap = "Anomalía de altura geopotencial media en contornos llenos (mgp) y viento geostrófico en líneas de corriente.", fig.height = 3.5, fig.width = 7.5>>=
 ggplot(eof[month %in% 1], aes(lon, lat)) +
    geom_contour_fill(aes(z = gh.t.w), xwrap = c(0, 360), 
                      breaks = AnchorBreaks(0, 0.01, 0)) +
@@ -114,6 +111,5 @@ ggplot(eof[month %in% 1], aes(lon, lat)) +
    theme_minimal() + theme_field()
 @
 
-\printbibliography
 
 \end{document}
