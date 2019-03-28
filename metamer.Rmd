@@ -1,50 +1,54 @@
-\documentclass[runningheads,13pt]{llncs}\usepackage{knitr}
-\usepackage{graphicx}
-\usepackage[utf8]{inputenc}
-\usepackage[spanish]{babel}
-\usepackage{xspace}
-\newcommand{\mytilde}{\lower.80ex\hbox{\char`\~}\xspace}    
-\usepackage{hyperref}
-\hypersetup{
-   hidelinks
-}
-\usepackage[backend=bibtex]{biblatex}
-\bibliography{packages}
-\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
-\begin{document}
+---
+submission: false
+lang: "spanish"
+title: "Si te gusta la estadística, bancate los metámeros"
+# titlerunning: "Título"
+authors:
+  - name: Elio Campitelli
+    affil: 1
+    orcid: "0000-1111-2222-3333"
+affiliations:
+  - number: 1
+    name: "Centro de Investigaciones del Mar y la Atmósfera - CONICET"
+    email: "elio.campitelli@cima.fcen.uba.ar"
+# authorrunning: P. Author et al.
+keywords: 
+  - "Hasta"
+  - "tres"
+  - "palabras clave"
+bibliography: latinRtest.bib
+output: 
+    latinr::latinr_article
+---
 
-\title{TITULO}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      fig.width = 4)
+knitr::opts_knit$set(self.contained = FALSE)
 
-%\titlerunning{Abbreviated paper title}
-% If the paper title is too long for the running head, you can set
-% an abbreviated paper title here
-%
-\author{Elio Campitelli}
+# knitr::write_bib(c("base", "data.table", "ggplot2", "metR", "raster"), 
+#                  file = "packages.bib")
 
-%
-\authorrunning{E. Campitelli}
-% First names are abbreviated in the running head.
-% If there are more than two authors, 'et al.' is used.
-%
-\institute{Centro de Investigaciones del Mar y la Atmósfera - CONICET\\
-\email{elio.campitelli@cima.fcen.uba.ar}\\
-%\url{http://www.springer.com/gp/computer-science/lncs}
-}
-%
-\maketitle              % typeset the header of the contributions
+hook_source = knitr::knit_hooks$get('source')
+knitr::knit_hooks$set(source = function(x, options) {
+   txt = hook_source(x, options)
+   # extend the default source hook
+   gsub('~', '\\\\mytilde', txt)
+})
 
-\keywords{1 \and 2 \and 3}
+knitr::knit_theme$set("moe")
+```
 
 
-
-
-\section{Introducción}
+# Introducción
 
 En 1973 Frank Anscombre creó cuatro sets de datos que compartían la media y el desvío de cada variable y su coeficiente de correlación pero que lucían muy distintos cuando se los grafica (ref). Desde entonces, el cuarteto de Anscombe se usa para ilustrar la importancia de visualizar los datos crudos en vez de confiar en los estadísticos. A pesar de eso, no existe mucha investigación sobre el fenómeno general de "datasets disintos con los mismos estadísticos" del cual el cuarteto de Anscombe es sólo un ejemplo. Además usar un conjunto de datos creados hace 50 años para enseñar esto da la impresión de que es un caso único o extraordinario. 
 
 En este artículo propongo el nombre de "metámeros estadísticos" en analogía al concepto de colorimetría y presento el paquete metamer, que implementa el algoritmo de blabla (ref) para la creación automática de metámeros. 
 
-\section{Fuente de metamerismo estadístico}
+# Fuente de metamerismo estadístico
 
 El Demonio de Laplace no sabe ni necesita saber estadística. Él tiene puede conocer la posición y velocidad de cada partícula del universo y usar ese conocimiento para predecir su evolución. Pero los seres humanos no podemos analizar más de unos pocos números por vez. Si queremos entender el universo tenemos que resumir grand cantidad de observaciones en unos pocos números. Necesitamos saber estadística.
 
@@ -59,9 +63,3 @@ El Cuarteto de Anscombe debe ser entendido bajo esta idea. Va más allá de
 
 
 Si pensamos en una función que 
-
-
-
-
-
-\end{document}
