@@ -1,24 +1,31 @@
 ---
 submission: false
-lang: "spanish"
+type: oral   #oral, poster, table
+lang: en-GB
 title: "Si te gusta la estadística, bancate los metámeros"
-# titlerunning: "Título"
+titlerunning: "Título"
 authors:
-  - name: Elio Campitelli
-    affil: 1
-    orcid: "0000-1111-2222-3333"
+   - firstname: Elio
+     lastname: Campitelli
+     email: "elio.campitelli@cima.fcen.uba.ar"
+     country: Argentina
+     affil: 1
+     # webpage: "google.com"  # Optional 
+     corresponding: true
+     speaker: true
 affiliations:
-  - number: 1
-    name: "Centro de Investigaciones del Mar y la Atmósfera - CONICET"
-    email: "elio.campitelli@cima.fcen.uba.ar"
+   - Centro de Investigaciones del Mar y la Atmósfera - CONICET
 # authorrunning: P. Author et al.
+# abstract: "ablablab"
 keywords: 
-  - "Hasta"
-  - "tres"
-  - "palabras clave"
+   - "Mínimo"
+   - "tres"
+   - "palabras clave"
 bibliography: latinRtest.bib
 output: 
     latinr::latinr_article
+params: 
+  check_is_error: TRUE
 ---
 
 ```{r setup, include=FALSE}
