@@ -1,7 +1,7 @@
 ---
 submission: false
 type: oral   #oral, poster, table
-lang: en-GB
+lang: spanish
 title: "Si te gusta la estadística, bancate los metámeros"
 titlerunning: "Título"
 authors:
@@ -24,12 +24,13 @@ keywords:
 bibliography: latinRtest.bib
 output: 
     latinr::latinr_article
+keep_tex: false
 params: 
   check_is_error: TRUE
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(cache = TRUE,
+knitr::opts_chunk$set(cache = FALSE,
                       message = FALSE,
                       warning = FALSE,
                       fig.width = 4)
