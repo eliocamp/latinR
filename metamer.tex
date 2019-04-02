@@ -53,29 +53,42 @@ El Demonio de Laplace no sabe ni necesita saber estadística. Él tiene
 puede conocer la posición y velocidad de cada partícula del universo y
 usar ese conocimiento para predecir su evolución. Pero los seres humanos
 no podemos analizar más de unos pocos números por vez. Si queremos
-entender el universo tenemos que resumir grand cantidad de observaciones
-en unos pocos números. Necesitamos saber estadística.
+entender el universo tenemos que resumir grandes cantidad de
+observaciones en unos pocos números. Necesitamos saber estadística.
 
-Ese es el objetivo de la gran mayoría de los métodos estadísticos:
-conseguir algunos pocos números representativos y comprensibles a partir
-de sets de datos demasiado grandes para entenderlos. El proceso
-necesariamente elimina información (distintos métodos priorizan
-diferentes parte de la información) lo cual implica necesariamente que
-los mismos pocos números pueden ser producidos por una infinidad de sets
-de datos distintos. Por ejemplo, se necesitan \(N\) momentos
-estadisticos para caracterizar unívocamente un set de datos de \(N\)
+La mayoría de los métodos estadísticos buscan reducir grandes cantidades
+de datos en unos pocos números interpretables y representativos. Esto
+implica que son funciones continuas (si dos datasets son similares, sus
+estadísticos deben ser similares) que pasan de un espacio de alta
+dimensión a uno de dimensión menor. No existen funciones con ambas
+propiedades que sean
+biyectivas\footnote{https://arxiv.org/pdf/1003.1467.pdf}, por lo que,
+para cualquier método estadístico, los mismos pocos números pueden ser
+producidos por una infinidad de sets de datos distintos. Por ejemplo, se
+necesitan \(N\) momentos estadisticos para caracterizar unívocamente un
+set de datos de \(N\)
 observaciones\footnote{Técnicamente unívocamente a menos a menos de una permutación.}.
 Como colorario, existen infinitos sets de datos de N observaciones que
 comparten los mismos \(n < N\) momentos.
 
-Sea una transformación estadística \(E : A \rightarrow B\). Voy a llamar
-metámeros de \(E\) a todo elemento de \(a \in A\) tal que \(E(a) = b_0\)
-con \(b_0 \in B\).
+\begin{definition}
+Sea una función $E : A \rightarrow B$ y un $a_0 \in A$. El conjunto $M_{a, E}$ de todos los $a \in A$ tal que $E(a) = E(a_0)$ son los metámeros de $a_0$ con respecto a $E$. 
+\end{definition}
 
-El Cuarteto de Anscombe debe ser entendido bajo esta idea. Va más allá
-de
+Es decir, toda función no biyectiva tiene metámeros. El metamerismo es
+una consecuencia inevitable de los métodos estadísticos; no es un bug,
+es una característica. El Cuarteto de Anscombe es un ejemplo dramático,
+pero no debe entenderse como aplicable sólo a los momentos estadísticos.
+Tampoco debe concluirse que visualizar los datos sea la única solución,
+ya que al proyectar de los datos en un espacio bidimensional, la
+visualización también sufre de metamerismo.
 
-Si pensamos en una función que
+\section{Cómo crear metámeros}
+
+El paquete metamer implementa el algoritmo de (ref) para generar
+metámeros a partir de un dataset y una transformación estadística que
+debe preservarse. Al ser completamente genérico, permite ilustrar el
+metamerismo de cualquier transformación. Por ejemplo,\ldots{}.
 %
 % ---- Bibliography ----
 %
