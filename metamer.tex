@@ -1,14 +1,13 @@
-\documentclass[runningheads,spanish]{llncs}
+\documentclass[runningheads,español]{llncs}
 %
 \usepackage{graphicx}
-\usepackage[utf8]{inputenc}
-\usepackage{natbib}
-\bibliographystyle{abbrvnat}
+%\usepackage[utf8]{inputenc}
+%\usepackage{natbib}
 
-\usepackage[spanish]{babel}
-
+\usepackage[hidelinks]{hyperref}
 
 \begin{document}
+
 %
 \title{Si te gusta la estadística, bancate los metámeros}
 %
@@ -20,7 +19,7 @@ Elio Campitelli\inst{1} }
 
 \institute{Centro de Investigaciones del Mar y la Atmósfera - CONICET}
 
-%
+%\addbibresource{}
 \maketitle
 %
 
@@ -29,25 +28,28 @@ Elio Campitelli\inst{1} }
 \keywords{ Mínimo \and  tres \and  palabras clave }
 
 
-\section{Introducción}
+\hypertarget{introduccion}{%
+\section{Introducción}\label{introduccion}}
 
 En 1973 Frank Anscombre creó cuatro sets de datos que compartían la
 media y el desvío de cada variable y su coeficiente de correlación pero
-que lucían muy distintos cuando se los grafica (ref). Desde entonces, el
-cuarteto de Anscombe se usa para ilustrar la importancia de visualizar
-los datos crudos en vez de confiar en los estadísticos. A pesar de eso,
-no existe mucha investigación sobre el fenómeno general de ``datasets
-disintos con los mismos estadísticos'' del cual el cuarteto de Anscombe
-es sólo un ejemplo. Además usar un conjunto de datos creados hace 50
-años para enseñar esto da la impresión de que es un caso único o
+que lucían muy distintos cuando se los grafica (Anscombe 1973). Desde
+entonces, el cuarteto de Anscombe se usa para ilustrar la importancia de
+visualizar los datos crudos en vez de confiar en los estadísticos. A
+pesar de eso, no existe mucha investigación sobre el fenómeno general de
+``datasets disintos con los mismos estadísticos'' del cual el cuarteto
+de Anscombe es sólo un ejemplo. Además usar un conjunto de datos creados
+hace 50 años para enseñar esto da la impresión de que es un caso único o
 extraordinario.
 
 En este artículo propongo el nombre de ``metámeros estadísticos'' en
 analogía al concepto de colorimetría y presento el paquete metamer, que
-implementa el algoritmo de blabla (ref) para la creación automática de
-metámeros.
+implementa el algoritmo de Matejka and Fitzmaurice (2017) para la
+creación automática de metámeros.
 
-\section{Fuente de metamerismo estadístico}
+\hypertarget{fuente-de-metamerismo-estadistico}{%
+\section{Fuente de metamerismo
+estadístico}\label{fuente-de-metamerismo-estadistico}}
 
 El Demonio de Laplace no sabe ni necesita saber estadística. Él tiene
 puede conocer la posición y velocidad de cada partícula del universo y
@@ -61,9 +63,8 @@ de datos en unos pocos números interpretables y representativos. Esto
 implica que son funciones continuas (si dos datasets son similares, sus
 estadísticos deben ser similares) que pasan de un espacio de alta
 dimensión a uno de dimensión menor. No existen funciones con ambas
-propiedades que sean
-biyectivas\footnote{https://arxiv.org/pdf/1003.1467.pdf}, por lo que,
-para cualquier método estadístico, los mismos pocos números pueden ser
+propiedades que sean biyectivas (Malek et al. 2010), por lo que, para
+cualquier método estadístico, los mismos pocos números pueden ser
 producidos por una infinidad de sets de datos distintos. Por ejemplo, se
 necesitan \(N\) momentos estadisticos para caracterizar unívocamente un
 set de datos de \(N\)
@@ -83,12 +84,39 @@ Tampoco debe concluirse que visualizar los datos sea la única solución,
 ya que al proyectar de los datos en un espacio bidimensional, la
 visualización también sufre de metamerismo.
 
-\section{Cómo crear metámeros}
+\hypertarget{como-crear-metameros}{%
+\section{Cómo crear metámeros}\label{como-crear-metameros}}
 
-El paquete metamer implementa el algoritmo de (ref) para generar
-metámeros a partir de un dataset y una transformación estadística que
-debe preservarse. Al ser completamente genérico, permite ilustrar el
-metamerismo de cualquier transformación. Por ejemplo,\ldots{}.
+El paquete metamer implementa el algoritmo de Matejka and Fitzmaurice
+(2017) para generar metámeros a partir de un dataset y una
+transformación estadística que debe preservarse. Al ser completamente
+genérico, permite ilustrar el metamerismo de cualquier transformación.
+Por ejemplo,\ldots.
+
+\hypertarget{bibliografia}{%
+\section*{Bibliografía}\label{bibliografia}}
+\addcontentsline{toc}{section}{Bibliografía}
+
+\hypertarget{refs}{}
+\leavevmode\hypertarget{ref-anscombe1973}{}%
+Anscombe, F. J. 1973. ``Graphs in Statistical Analysis.'' \emph{The
+American Statistician} 27 (1): 17--21.
+\url{https://doi.org/10.2307/2682899}.
+
+\leavevmode\hypertarget{ref-malek2010}{}%
+Malek, Freshteh, Hamed Daneshpajouh, Hamidreza Daneshpajouh, and
+Johannes Hahn. 2010. ``An Interesting Proof of the Nonexistence
+Continuous Bijection Between Rn̂ and R2̂ for N != 2.''
+\emph{arXiv:1003.1467 {[}Math{]}}, March.
+\url{http://arxiv.org/abs/1003.1467}.
+
+\leavevmode\hypertarget{ref-matejka2017}{}%
+Matejka, Justin, and George Fitzmaurice. 2017. ``Same Stats, Different
+Graphs: Generating Datasets with Varied Appearance and Identical
+Statistics Through Simulated Annealing.'' In \emph{Proceedings of the
+2017 CHI Conference on Human Factors in Computing Systems - CHI '17},
+1290--4. Denver, Colorado, USA: ACM Press.
+\url{https://doi.org/10.1145/3025453.3025912}.
 %
 % ---- Bibliography ----
 %
@@ -100,5 +128,6 @@ metamerismo de cualquier transformación. Por ejemplo,\ldots{}.
 % \bibliography{mybibliography}
 %
 
-\bibliography{latinRtest.bib}
+%%\bibliography{metamers.bib}
+%
 \end{document}
