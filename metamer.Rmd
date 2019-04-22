@@ -29,14 +29,14 @@ params:
   check_is_error: TRUE
 ---
 
-```{r submission-checks, echo=FALSE}
+```{r submission-checks, echo=FALSE, cache = FALSE}
 # Runs some basic checks in metadata. To disable, set check_is_error to FALSE
 latinr::latinr_checks(rmarkdown::metadata, params$check_is_error)
 ```
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(cache = FALSE,
+knitr::opts_chunk$set(cache = TRUE,
                       message = FALSE,
                       warning = FALSE,
                       fig.width = 4)
@@ -47,11 +47,11 @@ knitr::opts_knit$set(self.contained = FALSE)
 
 hook_source = knitr::knit_hooks$get('source')
 knitr::knit_hooks$set(source = function(x, options) {
-   txt = hook_source(x, options)
-   # extend the default source hook
-   gsub('~', '\\\\mytilde', txt)
+  txt = hook_source(x, options)
+  # extend the default source hook
+  gsub('~', '\\\\mytilde', txt)
 })
-
+knitr::opts_knit$set(out.format = "latex")
 knitr::knit_theme$set("moe")
 ```
 
@@ -76,5 +76,50 @@ Es decir, toda función no biyectiva tiene metámeros. El metamerismo es una con
 # Cómo crear metámeros
 
 El paquete metamer implementa el algoritmo de @matejka2017 para generar metámeros a partir de un dataset y una transformación estadística que debe preservarse. Al ser completamente genérico, permite ilustrar el metamerismo de cualquier transformación. Por ejemplo,.... 
+
+```{r}
+library(metamer)
+library(ggplot2)
+```
+
+```{r}
+g <- 9.81
+k <- 0.1
+energy <- delayed_with(omega^2/2 + (1 - cos(theta)*g) + k*abs(theta),
+                       sign(disip) >= 0)
+time <- delayed_with(-disip)
+
+inicial <- data.frame(omega = 1, 
+                      theta = -pi/2,
+                      disip = 0)
+
+fase <- metamerize(inicial, 
+                   preserve = energy,
+                   minimize = time,
+                   perturbation = 0.1, 
+                   signif = 3,
+                   annealing = FALSE,
+                   N = 100000)
+```
+
+```{r}
+fase <- as.data.frame(fase)
+
+fase$theta[fase$theta >= pi] <- fase$theta[fase$theta >= pi] - 2*pi
+fase$theta[fase$theta < -pi] <- fase$theta[fase$theta < -pi] + 2*pi
+
+ggplot(fase, aes(theta, omega)) +
+  geom_point()  
+
+fase <- transform(fase, 
+          x = sin(theta),
+          y = cos(theta))
+
+ggplot(fase, aes(x, -y)) +
+  geom_point()
+```
+
+
+
 
 # Bibliografía
