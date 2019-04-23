@@ -1,67 +1,62 @@
 ---
 submission: false
 type: oral   #oral, poster, table
-language: español
+language: spanish
 title: "Si te gusta la estadística, bancate los metámeros"
-titlerunning: "Título"
 authors:
    - firstname: Elio
      lastname: Campitelli
      email: "elio.campitelli@cima.fcen.uba.ar"
      country: Argentina
-     affil: 1
+     affil: Centro de Investigaciones del Mar y la Atmósfera - CONICET
      # webpage: "google.com"  # Optional 
      corresponding: true
      speaker: true
-affiliations:
-   - Centro de Investigaciones del Mar y la Atmósfera - CONICET
-# authorrunning: P. Author et al.
 # abstract: "ablablab"
 keywords: 
    - "Mínimo"
    - "tres"
    - "palabras clave"
 bibliography: metamers.bib
+biblio-style: apalike-es   
 output: 
-    latinr::latinr_article
-keep_tex: true
+    latinr::latinr_article:
+      keep_tex: false
 params: 
-  check_is_error: TRUE
+  check_is_error: FALSE
 ---
 
-```{r submission-checks, echo=FALSE, cache = FALSE}
+```{r submission-checks, echo = FALSE, cache = FALSE}
 # Runs some basic checks in metadata. To disable, set check_is_error to FALSE
 latinr::latinr_checks(rmarkdown::metadata, params$check_is_error)
 ```
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(cache = TRUE,
-                      message = FALSE,
-                      warning = FALSE,
-                      fig.width = 4)
-knitr::opts_knit$set(self.contained = FALSE)
-
-# knitr::write_bib(c("base", "data.table", "ggplot2", "metR", "raster"), 
-#                  file = "packages.bib")
-
-hook_source = knitr::knit_hooks$get('source')
-knitr::knit_hooks$set(source = function(x, options) {
-  txt = hook_source(x, options)
-  # extend the default source hook
-  gsub('~', '\\\\mytilde', txt)
-})
-knitr::opts_knit$set(out.format = "latex")
-knitr::knit_theme$set("moe")
+# knitr::opts_chunk$set(cache = TRUE,
+#                       message = FALSE,
+#                       warning = FALSE,
+#                       fig.width = 4)
+# knitr::opts_knit$set(self.contained = FALSE)
+# 
+# # knitr::write_bib(c("base", "data.table", "ggplot2", "metR", "raster"), 
+# #                  file = "packages.bib")
+# 
+# hook_source = knitr::knit_hooks$get('source')
+# knitr::knit_hooks$set(source = function(x, options) {
+#   txt = hook_source(x, options)
+#   # extend the default source hook
+#   gsub('~', '\\\\mytilde', txt)
+# })
 ```
 
-# Introducción
+## Introducción
 
-En 1973 Frank Anscombre creó cuatro sets de datos que compartían la media y el desvío de cada variable y su coeficiente de correlación pero que lucían muy distintos cuando se los grafica [@anscombe1973]. Desde entonces, el cuarteto de Anscombe se usa para ilustrar la importancia de visualizar los datos crudos en vez de confiar en los estadísticos. A pesar de eso, no existe mucha investigación sobre el fenómeno general de "datasets disintos con los mismos estadísticos" del cual el cuarteto de Anscombe es sólo un ejemplo. Además usar un conjunto de datos creados hace 50 años para enseñar esto da la impresión de que es un caso único o extraordinario. 
+En 1973 Frank Anscombe creó cuatro sets de datos que compartían la media y el desvío de cada variable y su coeficiente de correlación pero que lucían muy distintos cuando se los grafica [@anscombe1973]. Desde entonces, el cuarteto de Anscombe se usa para ilustrar la importancia de visualizar los datos crudos en vez de confiar en los estadísticos. A pesar de eso, no existe mucha investigación sobre el fenómeno general de "datasets disintos con los mismos estadísticos" del cual el cuarteto de Anscombe es sólo un ejemplo. Además usar un conjunto de datos creados hace 50 años para enseñar esto da la impresión de que es un caso único o extraordinario. 
 
-En este artículo propongo el nombre de "metámeros estadísticos" en analogía al concepto de colorimetría y presento el paquete metamer, que implementa el algoritmo de @matejka2017 para la creación automática de metámeros. 
+En este artículo propongo el nombre de "metámeros estadísticos" en analogía al concepto de colorimetría y presento el paquete \CRANpkg{metamer}, que implementa el algoritmo de @matejka2017 para la creación automática de metámeros. 
 
-# Fuente de metamerismo estadístico
+## Fuente de metamerismo estadístico
 
 El Demonio de Laplace no sabe ni necesita saber estadística. Él tiene puede conocer la posición y velocidad de cada partícula del universo y usar ese conocimiento para predecir su evolución. Pero los seres humanos no podemos analizar más de unos pocos números por vez. Si queremos entender el universo tenemos que resumir grandes cantidad de observaciones en unos pocos números. Necesitamos saber estadística.
 
@@ -73,53 +68,15 @@ Sea una función $E : A \rightarrow B$ y un $a_0 \in A$. El conjunto $M_{a, E}$ 
 
 Es decir, toda función no biyectiva tiene metámeros. El metamerismo es una consecuencia inevitable de los métodos estadísticos; no es un bug, es una característica. El Cuarteto de Anscombe es un ejemplo dramático, pero no debe entenderse como aplicable sólo a los momentos estadísticos. Tampoco debe concluirse que visualizar los datos sea la única solución, ya que al proyectar de los datos en un espacio bidimensional, la visualización también sufre de metamerismo. 
 
-# Cómo crear metámeros
+## Cómo crear metámeros
 
-El paquete metamer implementa el algoritmo de @matejka2017 para generar metámeros a partir de un dataset y una transformación estadística que debe preservarse. Al ser completamente genérico, permite ilustrar el metamerismo de cualquier transformación. Por ejemplo,.... 
+El paquete \CRANpkg{metamer} implementa el algoritmo de @matejka2017 para generar metámeros a partir de un dataset y una transformación estadística que debe preservarse. Al ser completamente genérico, permite ilustrar el metamerismo de cualquier transformación. Por ejemplo, este comando crea metámeros preservando los primeros 4 momentos. 
 
-```{r}
+```{r, eval = FALSE}
 library(metamer)
-library(ggplot2)
-```
-
-```{r}
-g <- 9.81
-k <- 0.1
-energy <- delayed_with(omega^2/2 + (1 - cos(theta)*g) + k*abs(theta),
-                       sign(disip) >= 0)
-time <- delayed_with(-disip)
-
-inicial <- data.frame(omega = 1, 
-                      theta = -pi/2,
-                      disip = 0)
-
-fase <- metamerize(inicial, 
-                   preserve = energy,
-                   minimize = time,
-                   perturbation = 0.1, 
-                   signif = 3,
-                   annealing = FALSE,
-                   N = 100000)
-```
-
-```{r}
-fase <- as.data.frame(fase)
-
-fase$theta[fase$theta >= pi] <- fase$theta[fase$theta >= pi] - 2*pi
-fase$theta[fase$theta < -pi] <- fase$theta[fase$theta < -pi] + 2*pi
-
-ggplot(fase, aes(theta, omega)) +
-  geom_point()  
-
-fase <- transform(fase, 
-          x = sin(theta),
-          y = cos(theta))
-
-ggplot(fase, aes(x, -y)) +
-  geom_point()
+metameros <- metamerize(data.frame(x = rnorm(100)), 
+                        preserve = moments_n(1:4))
 ```
 
 
-
-
-# Bibliografía
+## Bibliografía
