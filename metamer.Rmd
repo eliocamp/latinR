@@ -25,14 +25,15 @@ output:
 params: 
   check_is_error: FALSE
 ---
-
-```{r submission-checks, echo = FALSE, cache = FALSE}
-# Runs some basic checks in metadata. To disable, set check_is_error to FALSE
-latinr::latinr_checks(rmarkdown::metadata, params$check_is_error)
-```
-
-
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
+name <- tools::file_path_sans_ext(knitr::current_input())
+knitr::opts_chunk$set(echo = FALSE,
+                      cache = TRUE,
+                      cache.extra = 42, 
+                      warning = FALSE, message = FALSE,
+                      out.extra = "", 
+                      cache.path = paste0("cache/", name, "/"),
+                      fig.path = paste0("fig/", name, "/"))
 # knitr::opts_chunk$set(cache = TRUE,
 #                       message = FALSE,
 #                       warning = FALSE,
@@ -50,15 +51,22 @@ latinr::latinr_checks(rmarkdown::metadata, params$check_is_error)
 # })
 ```
 
+```{r submission-checks, echo = FALSE, cache = FALSE}
+# Runs some basic checks in metadata. To disable, set check_is_error to FALSE
+latinr::latinr_checks(rmarkdown::metadata, params$check_is_error)
+```
+
+
+
 ## Introducción
 
-En 1973 Frank Anscombe creó cuatro sets de datos que compartían la media y el desvío de cada variable y su coeficiente de correlación pero que lucían muy distintos cuando se los grafica [@anscombe1973]. Desde entonces, el cuarteto de Anscombe se usa para ilustrar la importancia de visualizar los datos crudos en vez de confiar en los estadísticos. A pesar de eso, no existe mucha investigación sobre el fenómeno general de "datasets disintos con los mismos estadísticos" del cual el cuarteto de Anscombe es sólo un ejemplo. Además usar un conjunto de datos creados hace 50 años para enseñar esto da la impresión de que es un caso único o extraordinario. 
+En 1973 Frank Anscombe creó cuatro sets de datos que comparten la media y el desvío de cada variable y su coeficiente de correlación, pero que lucen muy distintos cuando se los grafica [@anscombe1973]. Desde entonces, el cuarteto de Anscombe se usa para ilustrar la importancia de visualizar los datos crudos en vez de confiar en los estadísticos. A pesar de eso, no existe mucha investigación sobre el fenómeno general de "datasets disintos con los mismos estadísticos" del cual el cuarteto de Anscombe es sólo un ejemplo. Además usar un conjunto de datos creados hace 50 años para enseñar da la impresión de que es un caso único o extraordinario.
 
 En este artículo propongo el nombre de "metámeros estadísticos" en analogía al concepto de colorimetría y presento el paquete \CRANpkg{metamer}, que implementa el algoritmo de @matejka2017 para la creación automática de metámeros. 
 
 ## Fuente de metamerismo estadístico
 
-El Demonio de Laplace no sabe ni necesita saber estadística. Él tiene puede conocer la posición y velocidad de cada partícula del universo y usar ese conocimiento para predecir su evolución. Pero los seres humanos no podemos analizar más de unos pocos números por vez. Si queremos entender el universo tenemos que resumir grandes cantidad de observaciones en unos pocos números. Necesitamos saber estadística.
+El Demonio de Laplace no sabe ni necesita saber estadística. Él puede conocer la posición y velocidad de cada partícula del universo y usar ese conocimiento para predecir su evolución. Pero los seres humanos no podemos analizar más de unos pocos números por vez. Si queremos entender el universo tenemos que resumir grandes cantidad de observaciones en unos pocos números. Necesitamos saber estadística.
 
 La mayoría de los métodos estadísticos buscan reducir grandes cantidades de datos en unos pocos números interpretables y representativos. Esto implica que son funciones continuas (si dos datasets son similares, sus estadísticos deben ser similares) que pasan de un espacio de alta dimensión a uno de dimensión menor. No existen funciones con ambas propiedades que sean biyectivas [@malek2010], por lo que, para cualquier método estadístico, los mismos pocos números pueden ser producidos por una infinidad de sets de datos distintos. Por ejemplo, se necesitan $N$ momentos estadisticos para caracterizar unívocamente un set de datos de $N$ observaciones\footnote{Técnicamente unívocamente a menos a menos de una permutación.}. Como colorario, existen infinitos sets de datos de N observaciones que comparten los mismos $n < N$ momentos. 
 
@@ -70,12 +78,67 @@ Es decir, toda función no biyectiva tiene metámeros. El metamerismo es una con
 
 ## Cómo crear metámeros
 
-El paquete \CRANpkg{metamer} implementa el algoritmo de @matejka2017 para generar metámeros a partir de un dataset y una transformación estadística que debe preservarse. Al ser completamente genérico, permite ilustrar el metamerismo de cualquier transformación. Por ejemplo, este comando crea metámeros preservando los primeros 4 momentos. 
+El paquete \CRANpkg{metamer} implementa el algoritmo de @matejka2017 para generar metámeros. Iterativamente perturba un set de datos verificando que se preserve la transformación estadística de interés y, opcionalmente, que minimice una función.
 
-```{r, eval = FALSE}
+Al ser completamente genérico, permite ilustrar el metamerismo de cualquier transformación. El siguiente ejemplo genera sets de datos que comparten los primeros 3 momentos pero tienen distribuciones substancialmente distintas (sólo algunas se parecen a un sombrero). 
+
+```{r, include = FALSE}
+elefante <- data.table::fread("elefante.csv")
+elefante <- setNames(elefante, c("x", "y"))
+
+elefante$x <- scales::rescale(elefante$x, c(-2.5, 2.5))
+elefante$y <- scales::rescale(elefante$y, c(0, 1))
+
+xout <- seq(-2.5, 2.5, length.out = 64)
+elefante_density <- as.data.frame(with(elefante, approx(x, y, xout = xout)))
+
+elefante <- function(data) {
+   y <- density(data$x, from = -2.5, to = 2.5, n = 64)$y
+   y <- y/max(y)
+   mean(abs(y - elefante_density$y))
+}
+```
+
+```{r, include = FALSE}
+elefante_bg <- jpeg::readJPEG("principito-elefante.jpg")
+elefante_bg <- raster::as.matrix(raster::raster(elefante_bg))
+elefante_bg <- reshape2::melt(elefante_bg)
+elefante_bg$x <- scales::rescale(elefante_bg$Var2, c(-2.5, 3))
+elefante_bg$y <- scales::rescale(-elefante_bg$Var1, c(0, 1))
+N <- nrow(elefante_bg)
+elefante_bg <- elefante_bg[rep(seq_len(N), 6), ]
+elefante_bg$.metamer <- rep(1:6, each = N)
+```
+
+
+```{r set_seed, include=FALSE}
+set.seed(42)
+```
+
+```{r metamerisation, dependson="set_seed", cache = TRUE}
 library(metamer)
-metameros <- metamerize(data.frame(x = rnorm(100)), 
-                        preserve = moments_n(1:4))
+metameros <- metamerize(data.frame(x = rt(200, 10)), 
+                        preserve = moments_n(1:3),
+                        minimize = elefante,
+                        annealing = FALSE,
+                        N = 300000)
+```
+
+
+
+
+```{r plot, echo=FALSE, fig.cap="Densidad de probabilidad de 6 metámeros. Todas comparten el mismo promedio, desvío estándard y asimetría.", warning=FALSE, dev="cairo_pdf", fig.height=2.5, dependson="metamerisation"}
+library(ggplot2)
+ggplot(metameros, aes(x)) +
+   geom_raster(data = elefante_bg, aes(x, y, fill = value, alpha = .metamer^2)) +
+   geom_density(aes(y = ..scaled..), size = 1) + 
+   scale_y_continuous("Densidad", limits = c(0, 1)) +
+   scale_x_continuous(limits = c(-2.5, 3)) +
+   scale_fill_gradient(low = "black", high = "white", guide = "none") +
+   scale_alpha(range = c(0, 0.5), guide = "none") +
+   facet_wrap(~.metamer) +
+   theme_minimal() +
+   theme(panel.grid = element_blank(), aspect.ratio = 89/320)
 ```
 
 
