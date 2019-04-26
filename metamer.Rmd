@@ -2,17 +2,18 @@
 submission: false
 type: oral   #oral, poster, table
 language: spanish
+topics: [1, 2]
+# Para la lista de tópicos usá latinr::latinr_topics()
 title: "Si te gusta la estadística, bancate los metámeros"
 authors:
    - first_name: Elio
      last_name: Campitelli
      email: "elio.campitelli@cima.fcen.uba.ar"
-     country: Argentina
+     country: ar  # lista en latinr::latinr_countries()
      Affiliation: Centro de Investigaciones del Mar y la Atmósfera - CONICET
-     # webpage: "google.com"  # Optional 
+     # url: "google.com"  # Optional 
      corresponding: true
-     speaker: true
-# abstract: "ablablab"
+speaker: 1  # sólo un autor puede estar como speaker
 keywords: 
    - "Mínimo"
    - "tres"
@@ -23,7 +24,7 @@ output:
     latinr::latinr_article:
       keep_tex: false
 params: 
-  check_is_error: FALSE
+  check_is_error: TRUE
 ---
 ```{r setup, include = FALSE}
 name <- tools::file_path_sans_ext(knitr::current_input())
