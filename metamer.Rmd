@@ -24,7 +24,7 @@ output:
     latinr::latinr_article:
       keep_tex: false
 params: 
-  check_is_error: TRUE
+  check_is_error: FALSE
 ---
 ```{r setup, include = FALSE}
 name <- tools::file_path_sans_ext(knitr::current_input())
