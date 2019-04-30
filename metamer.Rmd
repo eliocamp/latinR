@@ -1,8 +1,7 @@
 ---
-submission: false
 type: oral   #oral, poster, table
 language: spanish
-topics: [1, 2]
+topics: [1, 2, 3]
 # Para la lista de tópicos usá latinr::latinr_topics()
 title: "Si te gusta la estadística, bancate los metámeros"
 authors:
@@ -10,14 +9,15 @@ authors:
      last_name: Campitelli
      email: "elio.campitelli@cima.fcen.uba.ar"
      country: ar  # lista en latinr::latinr_countries()
-     Affiliation: Centro de Investigaciones del Mar y la Atmósfera - CONICET
+     Affiliation: Centro de Investigaciones del Mar y la Atmósfera - UBA/CONICET
      # url: "google.com"  # Optional 
      corresponding: true
 speaker: 1  # sólo un autor puede estar como speaker
 keywords: 
-   - "Mínimo"
-   - "tres"
-   - "palabras clave"
+   - "metámeros"
+   - "estadística descriptiva"
+   - "algoritmos genéticos"
+   - "cuarteto de anscombe"
 bibliography: metamers.bib
 biblio-style: apalike-es   
 output: 
@@ -25,16 +25,18 @@ output:
       keep_tex: false
 params: 
   check_is_error: FALSE
+  submission: TRUE
 ---
 ```{r setup, include = FALSE}
 name <- tools::file_path_sans_ext(knitr::current_input())
-knitr::opts_chunk$set(echo = FALSE,
+knitr::opts_chunk$set(echo = TRUE,
                       cache = TRUE,
-                      cache.extra = 42, 
+                      cache.extra = 43, 
                       warning = FALSE, message = FALSE,
                       out.extra = "", 
                       cache.path = paste0("cache/", name, "/"),
                       fig.path = paste0("fig/", name, "/"))
+
 # knitr::opts_chunk$set(cache = TRUE,
 #                       message = FALSE,
 #                       warning = FALSE,
@@ -56,30 +58,30 @@ knitr::opts_chunk$set(echo = FALSE,
 # Runs some basic checks in metadata. To disable, set check_is_error to FALSE
 latinr::latinr_checks(rmarkdown::metadata, params$check_is_error)
 ```
-
+   
 ## Introducción
 
-En 1973 Frank Anscombe creó cuatro sets de datos que comparten la media y el desvío de cada variable y su coeficiente de correlación, pero que lucen muy distintos cuando se los grafica [@anscombe1973]. Desde entonces, el cuarteto de Anscombe se usa para ilustrar la importancia de visualizar los datos crudos en vez de confiar en los estadísticos sumarios. A pesar de esto, no existe mucha investigación sobre el fenómeno general de "sets de datos disintos con iguales estadísticos" del cual el cuarteto de Anscombe es sólo un ejemplo. Además usar un conjunto de datos creados hace 50 años para enseñar da la impresión de que es un caso único o extraordinario.
+En 1973 Frank Anscombe creó cuatro sets de datos que comparten la media y el desvío de cada variable y su coeficiente de correlación, pero que lucen muy distintos cuando se los grafica [@anscombe1973]. Desde entonces, el cuarteto de Anscombe se usa para ilustrar la importancia de visualizar los datos crudos en vez de confiar en los estadísticos sumarios. Sin embargo, no existe mucha investigación sobre el fenómeno general de "sets de datos disintos con iguales estadísticos" del cual el cuarteto de Anscombe es sólo un ejemplo. Además usar un conjunto de datos creados hace 50 años para enseñar da la impresión de que es un caso único o extraordinario.
 
 En este artículo propongo el nombre de "metámeros estadísticos" en analogía al concepto de colorimetría y presento el paquete \CRANpkg{metamer}, que implementa el algoritmo de @matejka2017 para la creación automática de metámeros. 
-
-## Fuente de metamerismo estadístico
+   
+## Fundamentos de metamerismo estadístico
 
 El Demonio de Laplace no sabe ni necesita saber estadística. Él puede conocer la posición y velocidad de cada partícula del universo y usar ese conocimiento para predecir su evolución. Pero los seres humanos no podemos analizar más de unos pocos números por vez. Si queremos entender el universo tenemos que resumir grandes cantidad de observaciones en unos pocos números. Necesitamos saber estadística.
 
-La mayoría de los métodos estadísticos buscan representar grandes cantidades de datos con unos pocos números interpretables, lo cual implica una reducción de la dimensionalidad. Intuitivamente, parecería que no se puede representar N números con M números menor que N. Demostraciones matemáticas dependen de las propiedades del método en cuestión. Se pueden usar las identidades de Newton y los polinomios simétricos elementales para demostrar que se necesitan N momentos para describir unívocamente una muestra de tamaño N\footnote{Técnicamente unívocamente a menos de una permutación.}. Como colorario, existen infinitos sets de datos de N observaciones que comparten los mismos $n < N$ momentos. 
+La mayoría de los métodos estadísticos buscan representar grandes cantidades de datos con unos pocos números interpretables, lo cual implica una reducción de la dimensionalidad. Intuitivamente, parecería que no se puede representar N números con M números menor que N, aunque esta propiedad debe demostrarse para cada método estadístico. Se pueden usar las identidades de Newton y los polinomios simétricos elementales para demostrar que se necesitan N momentos para describir unívocamente una muestra de tamaño N\footnote{Técnicamente unívocamente a menos de una permutación.}. Como colorario, existen infinitos sets de datos de N observaciones que comparten los mismos $n < N$ momentos. 
 
 Voy a llamar "metámeros" de un determinado set de datos al conjunto datos que comparten el valor de una transformación estadística. El nombre surge por analogía al metamerismo en colorimetría; el fenómeno por el cual nuestros ojos perciben el mismo color a partir de espectros distintos al reducirlos a los mismos 3 números (rojo, verde y azul). 
 
 Es decir, toda transformación estadística no inyectiva tiene metámeros. El Cuarteto de Anscombe es un ejemplo dramático, pero no debe entenderse como aplicable sólo a los momentos estadísticos. Ninguna transformación estadística representable como una función contínua es inyectiva si reduce la dimensión del problema [@malek2010]. Como en general se busca que datos similares tengan transformaciones similares, el metamerismo es una consecuencia inevitable de los métodos estadísticos. No es un bug, es una característica.
 
-Tampoco debe concluirse que visualizar los datos sea la única solución. Al proyectar de los datos en un espacio bidimensional se pierde información y, como la silueta de un sombrero que puede confundirse con la de una boa digiriendo un elefante, los gráficos también sufren de metamerismo. 
+Tampoco debe concluirse que visualizar los datos sea la única solución. Al proyectar los datos en un espacio bidimensional se pierde información y, como la silueta de un sombrero que puede confundirse con la de una boa digiriendo un elefante, los gráficos también sufren de metamerismo. 
 
 ## Cómo crear metámeros
 
 El paquete \CRANpkg{metamer} implementa el algoritmo de @matejka2017 para generar metámeros. Perturba un set de datos iterativamente, verificando que se preserve la transformación estadística de interés y, opcionalmente, que se minimice una función.
 
-Al ser completamente genérico, permite ilustrar el metamerismo de cualquier transformación. El siguiente ejemplo genera sets de datos que comparten los primeros 3 momentos al menos con 2 cifras significativas pero cuyas distribuciones son substancialmente distintas (Figura \ref{fig:plot}).
+Al ser completamente genérico, permite ilustrar el metamerismo de cualquier transformación. El siguiente código genera sets de datos que comparten los primeros 3 momentos al menos con 2 cifras significativas pero cuyas distribuciones son substancialmente distintas (Figura \ref{fig:plot}).
 
 ```{r elefante, include = FALSE}
 elefante <- data.table::fread("elefante.csv")
@@ -114,17 +116,17 @@ elefante_bg$.metamer <- rep(1:6, each = N)
 set.seed(42)
 ```
 
-```{r metamerisation, dependson="set_seed", cache = TRUE}
+```{r metamerisation, dependson="set_seed"}
 library(metamer)
-metameros <- metamerize(data.frame(x = rt(200, 10)), 
-                        preserve = moments_n(1:3),
-                        minimize = elefante,
-                        annealing = FALSE,
-                        N = 250000)
+metameros <- metamerize(data.frame(x = rt(200, 5)), # dataset inicial
+                        preserve = moments_n(1:3),  # función a preservar
+                        minimize = elefante,        # función a minimizar
+                        annealing = FALSE,          # todos los metámeros minimizan `minimize`
+                        N = 250000)                 # número de iteraciones
 ```
 
 
-```{r moments}
+```{r moments, include = FALSE, dependson="metamerisation"}
 library(magrittr)
 metamer_moments <- trim(metameros, 6) %>% 
    lapply(moments_n(1:3)) %>% 
@@ -135,12 +137,12 @@ metamer_moments <- trim(metameros, 6) %>%
 metamer_moments$label <- with(metamer_moments, 
                               paste0("M1: ", signif(M1, 2), "\n",
                                      "M2:    ", signif(M2, 2), "\n",
-                                     "M3:  ", signif(M3, 2), "\n"))
+                                     "M3:    ", signif(M3, 2), "\n"))
 metamer_moments$.metamer <- 1:6
 ```
 
 
-```{r plot, echo=FALSE, fig.cap="Densidad de probabilidad de 6 metámeros. Todas comparten los primeros tres momentos no centrados hasta 2 cifras significativas (M1, M2 y M3).", warning=FALSE, dev="cairo_pdf", fig.height=3.2, dependson=c("metamerisation", "moments")}
+```{r plot, echo=FALSE, fig.cap="Densidad de probabilidad de 6 metámeros. Todas comparten los primeros tres momentos no centrados hasta 2 cifras significativas (M1, M2 y M3).", warning=FALSE, dev="cairo_pdf", fig.height=3.2, cache = FALSE}
 library(ggplot2)
 ggplot(metameros, aes(x)) +
    geom_raster(data = elefante_bg, aes(x, y, fill = value, alpha = .metamer^2)) +
@@ -161,8 +163,5 @@ ggplot(metameros, aes(x)) +
          aspect.ratio = 89/320)
 ```
 
-## Conclusión 
 
-El paquete metamer...
-
-## Bibliografía
+## Referencias
