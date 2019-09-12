@@ -8,6 +8,56 @@ library(ggtext)
 # install.packages("datasauRus")
 library(datasauRus)
 
+wavelength_to_rgb <- function(wavelength, gamma=0.8){
+   
+   #
+   #    Based on code by Dan Bruton
+   #    http://www.physics.sfasu.edu/astro/color/spectra.html
+   #    '''
+   
+   if (wavelength >= 380 & wavelength <= 440) {
+      attenuation = 0.3 + 0.7 * (wavelength - 380) / (440 - 380)
+      R = ((-(wavelength - 440) / (440 - 380)) * attenuation) ^ gamma
+      G = 0.0
+      B = (1.0 * attenuation) ^ gamma
+   }
+   else if (wavelength >= 440 & wavelength <= 490) {
+      R = 0.0
+      G = ((wavelength - 440) / (490 - 440)) ^ gamma
+      B = 1.0
+   }
+   else if (wavelength >= 490 & wavelength <= 510) {
+      R = 0.0
+      G = 1.0
+      B = (-(wavelength - 510) / (510 - 490)) ^ gamma
+   }
+   else if (wavelength >= 510 & wavelength <= 580) {
+      R = ((wavelength - 510) / (580 - 510)) ^ gamma
+      G = 1.0
+      B = 0.0
+   }
+   else if (wavelength >= 580 & wavelength <= 645) {
+      R = 1.0
+      G = (-(wavelength - 645) / (645 - 580)) ^ gamma
+      B = 0.0
+   }
+   else if (wavelength >= 645 & wavelength <= 750) {
+      attenuation = 0.3 + 0.7 * (750 - wavelength) / (750 - 645)
+      R = (1.0 * attenuation) ^ gamma
+      G = 0.0
+      B = 0.0
+   }
+   else {
+      R = 0.0
+      G = 0.0
+      B = 0.0
+   }
+   R = R * 255
+   G = G * 255
+   B = B * 255
+   return (rgb(floor(R), floor(G), floor(B), max=255))
+}
+
 
 # Datasaurio media -----------------
 label <- function(x, y) {
@@ -45,21 +95,21 @@ for (d in datasets) {
    end <- subset(datasaurus_dozen, dataset == d)
    end$dataset <- NULL
    
-   start <- metamerize(start, 
-                       preserve = delayed_with(mean(x), mean(y)),
-                       minimize = NULL, 
-                       N = 2000, 
-                       signif = 4,
-                       perturbation = 0.06,
-                       trim = 500,
-                       name = d) %>% 
+   start <- start %>% 
       metamerize(preserve = delayed_with(mean(x), mean(y)),
-                 minimize = mean_dist_to(end), 
-                 N = 80000, 
-                 trim = 1600,
-                 perturbation = 0.04,
+                 minimize = mean_self_closeness,
+                 N = 6000,
                  signif = 4,
-                 name = d)
+                 perturbation = 0.06,
+                 trim = 600,
+                 name = d) %>% 
+   metamerize(preserve = delayed_with(mean(x), mean(y)),
+              minimize = mean_dist_to(end),
+              N = 80000, 
+              trim = 1600,
+              perturbation = 0.04,
+              signif = 4,
+              name = d)
 }
 
 
@@ -157,7 +207,80 @@ anim_save("Presentación/dino_mediana.gif",  g,
           nframes = N*30/2, fps = 20, 
           width = 400, height = 400)
 
+
+
+# espectro --------
+
+library(colorscience)
+
+plot_spectrum <- function(object) {
+   
+   which <- dimnames(MaterialReferenceData)[[2]] %in% c("wavelength", object)
+   
+   data <- MaterialReferenceData[, which] %>% 
+      as.data.table() 
+   colnames(data) <- c("wavelength", "value")
+   
+   data[wavelength %between% c(380, 700)] %>% 
+      .[, color := wavelength_to_rgb(wavelength), by = wavelength] %>% 
+      ggplot(aes(wavelength, value)) +
+      geom_line(aes(color = color, group = 1), size = 2) +
+      # geom_col(aes(fill = color)) +
+      scale_x_continuous("Longitud de onda [nm]", limits = c(NA, 700)) +
+      scale_y_continuous("Espectro") +
+      scale_color_identity() +
+      scale_fill_identity()
+}
+
+
+
+
+plot_spectrum("Blue")
+
+plot_spectrum("YellowBanana")
+
+
+
+# spfit --------
+library(spfit)
+
+
+fit <- sp_fit(cars$dist)
+
+as.character(fit)
+
+ggplot(cars, aes(speed, dist)) +
+   geom_point() +
+   geom_point(aes(y = predict(sp_fit(dist))), 
+              color = "red") +
+   geom_point(aes(y = predict(change_digit(sp_fit(dist)))), 
+              color = "blue")
+
+
+
+
 # Latinr ------------------
+label <- function(x, y) {
+   x <- sprintf("%.4f", x)
+   x <- strsplit(x, "")[[1]]
+   x <- paste0("<span style='color:black'>", 
+               paste0(head(x, 4), collapse = ""),
+               "</span><span style='color:gray'>",
+               paste0(tail(x, -4), collapse = ""),
+               "</span>")
+   
+   y <- sprintf("%.4f", y)
+   y <- strsplit(y, "")[[1]]
+   y <- paste0("<span style='color:black'>", 
+               paste0(head(y, 4), collapse = ""),
+               "</span><span style='color:gray'>",
+               paste0(tail(y, -4), collapse = ""),
+               "</span>")
+   
+   
+   paste0("Media X: ", x, "<br>",
+          "Media Y: ", y)
+}
 
 to_latlon <- function(data) {
    
@@ -170,6 +293,7 @@ to_latlon <- function(data) {
    data
 }
 
+start_data <- as.data.table(datasaurus_dozen)[dataset == "dino"][, dataset := NULL]
 
 latinr <- rnaturalearth::ne_coastline(returnclass = "sf") %>% 
    sf::st_crop(c(xmin = -120, xmax = -30, ymin = -60, ymax = 30)) %>% 
@@ -181,67 +305,84 @@ latinr <- rnaturalearth::ne_coastline(returnclass = "sf") %>%
    .[]
 
 
-
-ggplot(latinr, aes(x, y)) +
-   geom_point() +
-   geom_point(data = start_data)
-
-X <- subset(datasauRus::datasaurus_dozen, dataset == "x_shape")
-X$dataset <- NULL
-
-star <- subset(datasauRus::datasaurus_dozen, dataset == "star")
-star$dataset <- NULL
-
-
-which_trim <- function(N) {
-   
-   floor(sqrt(1:N))
-}
-
 metamers <- metamerize(latinr, 
                        preserve = delayed_with(mean(x), mean(y), cor(x, y)),
-                       # minimize = mean_dist_to(latinr), 
-                       perturbation = 0.08,
-                       N = 5000,
-                       trim = 50) %>% 
-   metamerize(minimize = mean_dist_to(start_data),
-              perturbation = 0.08,
-              N = 500000,
-              trim = 500) %>% 
-   metamerize(minimize = mean_dist_to(latinr),
-              perturbation = 0.08,
-              N = 80000,
-              trim = 500)
+                       minimize = mean_dist_to(start_data),
+                       perturbation = 0.05,
+                       N = 1000)
 
-values <- lapply(metamers, delayed_with(mean_x = mean(x), mean_y = mean(y), cor = cor(x, y))) %>% 
-   lapply(as.data.table) %>% 
-   lapply(transpose) %>% 
-   rbindlist(idcol = ".metamer") %>% 
-   setnames(paste0("V", 1:3), c("mean_x", "mean_y", "cor"))
+g <- metamers %>% 
+   as.data.frame() %>% 
+   as.data.table() %>% 
+   .[.metamer %in% 1:3] %>%
+   ggplot(aes(x, y)) +
+   geom_point()  +
+   geom_richtext(data = function(d) d[, .(label = label(mean(x), mean(y))), 
+                                      by = .metamer],
+                 x = 85, y = 90, 
+                 family = hrbrthemes::font_rc,
+                 size = 7,
+                 aes(label = label)) +
+   # facet_wrap(~.metamer)
+   transition_manual(.metamer) 
+
+
+set.seed(42)
+metamers <- metamerize(latinr,
+                       preserve =  delayed_with(mean(x), mean(y)),
+                       # minimize = mean_dist_to(start_data),  
+                       signif = c(5, 4),
+                       perturbation = 0.08, 
+                       N = 10000,
+                       trim = 300) %>% 
+   metamerize(minimize = mean_dist_to(start_data),
+              preserve =  delayed_with(mean(x), mean(y)),
+              perturbation = 0.04,
+              signif = c(5, 4),
+              N = 300000,
+              trim = 600) %>% 
+   metamerize(perturbation = 0.08, 
+              minimize = NULL,
+              N = 10000,
+              trim = 300) %>% 
+   metamerize(minimize = mean_dist_to(latinr),
+              N = 300000,
+              perturbation = 0.04,
+              trim = 600)
+
+
 
 metamers %>% 
    as.data.frame() %>% 
    as.data.table() %>% 
-   
+   # subset(.metamer %in% c(1, 10, 40, 60)) %>% 
    ggplot(aes(x, y)) +
-   geom_point() +
-   geom_text(data = values, 
-             x = 100, y = 100,
-             vjust = 1, hjust = 1,
-             aes(label = paste0("mx    = ", signif(mean_x, 2), "\n",
-                                "my     = ", signif(mean_y, 2), "\n",
-                                "cor = ", signif(cor, 2)))) +
-   transition_manual(.metamer)
+   geom_point()  +
+   geom_richtext(data = function(d) d[, .(label = label(mean(x), mean(y))), 
+                                      by = .metamer],
+                 x = 85, y = 90, 
+                 family = hrbrthemes::font_rc,
+                 size = 7,
+                 aes(label = label)) +
+   transition_manual(.metamer) -> g
 
 
-metamers[[1]] %>% 
-   ggplot(aes(x, y)) +
-   geom_point() +
-   geom_text(data = values[1, ], 
-             x = 100, y = 100,
-             vjust = 1, hjust = 1,
-             aes(label = paste0("mx    = ", signif(mean_x, 4), "\n",
-                                "my     = ", signif(mean_y, 4), "\n",
-                                "cor = ", signif(cor, 4))))
+file <- "Presentación/latam_full.gif"
+anim_save(file,  g, 
+          duration = 5, fps = 20, 
+          width = 500, height = 500)
+
+
+img <- magick::image_read(file)
+
+img_anim <- magick::image_animate(img, dispose = "none")
+
+img_png <- magick::image_convert(img_anim, "png")
+
+dump <- lapply(1:3, function(i) {
+   magick::image_write(img_png[i], glue::glue("Presentación/frames/latam_{i}.png"),
+                       format = "png", flatten = TRUE)   
+})
+
 
 
