@@ -8,6 +8,44 @@ library(ggtext)
 # install.packages("datasauRus")
 library(datasauRus)
 
+
+
+theme_set(hrbrthemes::theme_ipsum_rc(base_size = 14))
+
+x = c(9, 3.323654, 7.50454, 2.035657, 0.81675)
+labs = c("Media X", "SD X", "Media Y", "SD Y", "Cor XY")
+digits <- 6
+signif <- c(4)
+
+label <- function(x, signif, digits, labs = names(x)) {
+   # browser()
+   force(labs)
+   format <- paste0("%.", digits, "f")
+   
+   x <- sprintf(format, x, zero.print = TRUE)
+   x <- strsplit(x, "")
+   
+   if (length(signif) == 1) {
+      signif <- rep(signif, length(x))
+   }
+   
+   x <- lapply(seq_along(x), function(i) {
+      paste0("<span style='color:black'>", 
+             paste0(head(x[[i]], signif[i]), collapse = ""),
+             "</span><span style='color:gray'>",
+             paste0(tail(x[[i]], -signif[i]), collapse = ""),
+             "</span>")
+   })
+   
+   # x <- setNames(x, names)
+   labs <- formatC(labs, width = max(nchar(labs)))
+   # labs <- gsub(" ", "&nbsp;", labs)
+   # browser()
+   paste0(paste0(labs, ": ", x), collapse = "<br>")
+}
+
+
+
 wavelength_to_rgb <- function(wavelength, gamma=0.8){
    
    #
@@ -59,53 +97,104 @@ wavelength_to_rgb <- function(wavelength, gamma=0.8){
 }
 
 
+# Anscombe  --------
+
+data(anscombe)
+anscombe <- anscombe %>% 
+   as.data.table() %>%
+   .[, obs := 1:.N] %>% 
+   tidyr::gather(key, value, -obs) %>% 
+   tidyr::separate(key, c("coord", "quartet"), sep = 1) %>% 
+   as.data.table() %>% 
+   dcast(obs + quartet ~ coord) %>% 
+   .[, quartet := c("I", "II", "III", "IV")[as.numeric(quartet)]]
+   
+anscombe %>% 
+dplyr::group_by(quartet) %>%
+   dplyr::summarize(
+      n=n(),
+      mean.x=round(mean(x),5), 
+      mean.y=round(mean(y),5), 
+      sd.x=round(sd(x),5), 
+      sd.y=round(sd(y),5), 
+      correlation=round(cor(x,y),5))
+
+ggplot(anscombe, aes(x, y)) +
+   geom_point() +
+   geom_richtext(data = function(d) d[, .(label = label(c("Media X" = mean(x),
+                                                          "SD X" = sd(x),
+                                                          "Media Y" = mean(y),
+                                                          "SD Y" = sd(y),
+                                                          "Cor XY" = cor(x, y)),
+                                                        signif = c(5), digits = 2)),
+                                      by = quartet],
+                 # x = 25, y = 10, 
+                 # hjust = -0.5,
+                 family = hrbrthemes::font_rc,
+                 size = 2,
+                 aes(x = 25, y = 10,label = label)) +
+   facet_wrap(~ quartet) +
+   coord_cartesian(clip = "off")
+
+
+
+ggsave("Presentación/anscombre.png", height = 4, width = 8)
+
 # Datasaurio media -----------------
-label <- function(x, y) {
-   x <- sprintf("%.4f", x)
-   x <- strsplit(x, "")[[1]]
-   x <- paste0("<span style='color:black'>", 
-               paste0(head(x, 4), collapse = ""),
-               "</span><span style='color:gray'>",
-               paste0(tail(x, -4), collapse = ""),
-               "</span>")
-   
-   y <- sprintf("%.4f", y)
-   y <- strsplit(y, "")[[1]]
-   y <- paste0("<span style='color:black'>", 
-               paste0(head(y, 4), collapse = ""),
-               "</span><span style='color:gray'>",
-               paste0(tail(y, -4), collapse = ""),
-               "</span>")
-   
-   
-   paste0("Media X: ", x, "<br>",
-          "Media Y: ", y)
-}
+
+# 
+# label <- function(x, y) {
+#    
+#    
+#    x <- sprintf("%.4f", x)
+#    x <- strsplit(x, "")[[1]]
+#    x <- paste0("<span style='color:black'>", 
+#                paste0(head(x, 4), collapse = ""),
+#                "</span><span style='color:gray'>",
+#                paste0(tail(x, -4), collapse = ""),
+#                "</span>")
+#    
+#    y <- sprintf("%.4f", y)
+#    y <- strsplit(y, "")[[1]]
+#    y <- paste0("<span style='color:black'>", 
+#                paste0(head(y, 4), collapse = ""),
+#                "</span><span style='color:gray'>",
+#                paste0(tail(y, -4), collapse = ""),
+#                "</span>")
+#    
+#    
+#    paste0("Media X: ", x, "<br>",
+#           "Media Y: ", y)
+# }
 
 datasets <- unique(datasaurus_dozen$dataset)
 datasets <- datasets[c(2:length(datasets), 1)]
 
 trunc_means <- delayed_with(trunc(mean(x), 2),
                             trunc(mean(y), 2))
+preserv <- delayed_with(c("Mean X" = mean(x), 
+                          "Mean Y" = mean(y),
+                          "Cor XY" = cor(x, y)))
 
 start <- subset(datasauRus::datasaurus_dozen, dataset == "dino")
 start$dataset <- NULL
 set.seed(42)
-for (d in datasets) {
+for (d in datasets[1:2]) {
    end <- subset(datasaurus_dozen, dataset == d)
    end$dataset <- NULL
    
    start <- start %>% 
-      metamerize(preserve = delayed_with(mean(x), mean(y)),
-                 minimize = mean_self_closeness,
+      metamerize(preserve = preserv,
+                 minimize = mean_self_proximity,
                  N = 6000,
                  signif = 4,
                  perturbation = 0.06,
                  trim = 600,
                  name = d) %>% 
-   metamerize(preserve = delayed_with(mean(x), mean(y)),
+   metamerize(preserve = preserv,
               minimize = mean_dist_to(end),
-              N = 80000, 
+              # N = 80000,
+              N = 8000,
               trim = 1600,
               perturbation = 0.04,
               signif = 4,
@@ -122,7 +211,8 @@ N <- uniqueN(m$.name)
 
 g <- ggplot(m, aes(x, y)) +
    geom_point() +
-   geom_richtext(data = function(d) d[, .(label = label(mean(x), mean(y))), by = .metamer],
+   geom_richtext(data = function(d) d[, .(label = label(preserv(.SD), signif = c(4, 4, 7), digits = 6)),
+                                      by = .metamer],
                  x = 85, y = 90, 
                  # hjust = -0.5,
                  family = hrbrthemes::font_rc,
@@ -134,79 +224,6 @@ g <- ggplot(m, aes(x, y)) +
 anim_save("Presentación/dino_media.gif",  g, 
           nframes = N*30/2, fps = 20, 
           width = 500, height = 500)
-
-
-# Datasaurio mediana  -----------------
-label <- function(x, y) {
-   x <- sprintf("%.4f", x)
-   x <- strsplit(x, "")[[1]]
-   x <- paste0("<span style='color:black'>", 
-               paste0(head(x, 4), collapse = ""),
-               "</span><span style='color:gray'>",
-               paste0(tail(x, -4), collapse = ""),
-               "</span>")
-   
-   y <- sprintf("%.4f", y)
-   y <- strsplit(y, "")[[1]]
-   y <- paste0("<span style='color:black'>", 
-               paste0(head(y, 4), collapse = ""),
-               "</span><span style='color:gray'>",
-               paste0(tail(y, -4), collapse = ""),
-               "</span>")
-   
-   
-   paste0("Mediana X: ", x, "<br>",
-          "Mediana Y: ", y)
-}
-
-start <- subset(datasauRus::datasaurus_dozen, dataset == "dino")
-start$dataset <- NULL
-set.seed(42)
-for (d in datasets) {
-   end <- subset(datasaurus_dozen, dataset == d)
-   end$dataset <- NULL
-   
-   start <- metamerize(start, 
-                       preserve = delayed_with(median(x), median(y)),
-                       minimize = NULL, 
-                       N = 20000, 
-                       signif = 4,
-                       trim = 500, 
-                       perturbation = 0.03,
-                       name = d) %>% 
-      metamerize(preserve = delayed_with(median(x), median(y)),
-                 minimize = mean_dist_to(end), 
-                 N = 200000, 
-                 trim = 1600,
-                 signif = 4,
-                 perturbation = 0.03,
-                 name = d)
-}
-
-
-
-m <- start %>% 
-   as.data.frame() %>% 
-   as.data.table()
-
-N <- uniqueN(m$.name)
-
-g <- ggplot(m, aes(x, y)) +
-   geom_point() +
-   geom_richtext(data = function(d) d[, .(label = label(median(x), median(y))), 
-                                      by = .metamer],
-                 x = 85, y = 90, 
-                 # hjust = -0.5,
-                 family = hrbrthemes::font_rc,
-                 size = 7,
-                 aes(label = label)) +
-   transition_manual(.metamer)
-
-
-anim_save("Presentación/dino_mediana.gif",  g, 
-          nframes = N*30/2, fps = 20, 
-          width = 400, height = 400)
-
 
 
 # espectro --------
@@ -306,7 +323,7 @@ latinr <- rnaturalearth::ne_coastline(returnclass = "sf") %>%
 
 
 metamers <- metamerize(latinr, 
-                       preserve = delayed_with(mean(x), mean(y), cor(x, y)),
+                       preserve = delayed_with(mean(x), mean(y)),
                        minimize = mean_dist_to(start_data),
                        perturbation = 0.05,
                        N = 1000)
