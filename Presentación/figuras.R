@@ -273,26 +273,26 @@ ggsave("Presentación/banana_espectro.png",g,  height = 2, width = 2)
 
 
 
+value <- "Blue"
 color <- function(data) c(colorscience::spectra2XYZ(as.matrix(data)),
-                          data$Blue >= 0,
-                          sum(data$Blue))
-
-object <- "Blue"
-
+                          data[[value]] >= 0,
+                          max(diff(data[[value]], 2)) < 6, 
+                          sum(data[[value]]))
 
 
-Blue <- as.data.frame(MaterialReferenceData[, c("wavelength", object)])
 
 
 Yellow <- as.data.frame(MaterialReferenceData[, c("wavelength", "Yellow")])
+Blue <- as.data.frame(MaterialReferenceData[, c("wavelength", "Blue")])
+
 
 blueish <- metamerize(Blue, 
                       preserve = color,
                       minimize = mean_dist_to(Yellow),
                       # minimize = delayed_with(sd(Blue)),
-                      change = "Blue",
+                      change = value,
                       signif = 3,
-                      N = 400000, 
+                      N = 800000, 
                       perturbation = 0.03,
                       trim = 500)
 
@@ -302,6 +302,9 @@ xyz2hex <- function(xyz) {
    do.call(rgb, as.list(colorscience::XYZ2RGB(xyz)))
 }
 
+plot_spectrum("Blue")
+
+plot_spectrum("Yellow")
 
 colors <- blueish %>% 
    as.data.frame() %>% 
@@ -361,27 +364,27 @@ ggplot(cars, aes(speed, dist)) +
 
 
 # Latinr ------------------
-label <- function(x, y) {
-   x <- sprintf("%.4f", x)
-   x <- strsplit(x, "")[[1]]
-   x <- paste0("<span style='color:black'>", 
-               paste0(head(x, 4), collapse = ""),
-               "</span><span style='color:gray'>",
-               paste0(tail(x, -4), collapse = ""),
-               "</span>")
-   
-   y <- sprintf("%.4f", y)
-   y <- strsplit(y, "")[[1]]
-   y <- paste0("<span style='color:black'>", 
-               paste0(head(y, 4), collapse = ""),
-               "</span><span style='color:gray'>",
-               paste0(tail(y, -4), collapse = ""),
-               "</span>")
-   
-   
-   paste0("Media X: ", x, "<br>",
-          "Media Y: ", y)
-}
+# label <- function(x, y) {
+#    x <- sprintf("%.4f", x)
+#    x <- strsplit(x, "")[[1]]
+#    x <- paste0("<span style='color:black'>", 
+#                paste0(head(x, 4), collapse = ""),
+#                "</span><span style='color:gray'>",
+#                paste0(tail(x, -4), collapse = ""),
+#                "</span>")
+#    
+#    y <- sprintf("%.4f", y)
+#    y <- strsplit(y, "")[[1]]
+#    y <- paste0("<span style='color:black'>", 
+#                paste0(head(y, 4), collapse = ""),
+#                "</span><span style='color:gray'>",
+#                paste0(tail(y, -4), collapse = ""),
+#                "</span>")
+#    
+#    
+#    paste0("Media X: ", x, "<br>",
+#           "Media Y: ", y)
+# }
 
 to_latlon <- function(data) {
    
@@ -488,7 +491,6 @@ dump <- lapply(1:3, function(i) {
 
 
 
-
 metamers <- metamerize(latinr,
                        preserve     =  delayed_with(mean(x), mean(y)),
                        minimize     = c(mean_dist_to(dino),
@@ -501,3 +503,166 @@ metamers <- metamerize(latinr,
                            mean_self_proximity),
               N        = 300000,
               trim     = 600)
+
+
+
+# Elefante -------
+elefante <- data.table::fread("elefante.csv")
+elefante <- setNames(elefante, c("x", "y"))
+
+elefante$x <- scales::rescale(elefante$x, c(-2.5, 2.5))
+elefante$y <- scales::rescale(elefante$y, c(0, 1))
+
+xout <- seq(-2.5, 2.5, length.out = 64)
+elefante_density <- as.data.frame(with(elefante, approx(x, y, xout = xout)))
+
+elefante <- function(data) {
+   y <- density(data$x, from = -2.5, to = 2.5, n = 64)$y
+   y <- y/max(y)
+   mean(abs(y - elefante_density$y))
+}
+
+elefante_bg <- jpeg::readJPEG("principito-elefante.jpg")
+elefante_bg <- raster::as.matrix(raster::raster(elefante_bg))
+elefante_bg <- reshape2::melt(elefante_bg)
+elefante_bg$x <- scales::rescale(elefante_bg$Var2, c(-2.5, 3))
+elefante_bg$y <- scales::rescale(-elefante_bg$Var1, c(0, 1))
+
+
+set.seed(42)
+elefantes <- metamerize(data.frame(x = rt(200, 5)), # dataset inicial
+                        preserve = moments_n(1:3),  # función a preservar
+                        minimize = elefante,        # función a minimizar
+                        annealing = FALSE,          # todos los metámeros minimizan `minimize` 
+                        signif = 3,
+                        perturbation = 0.01,
+                        N = 250000)  
+
+
+# N <- nrow(elefante_bg)
+# elefante_bg <- elefante_bg[rep(seq_len(N), 10), ]
+# elefante_bg$.metamer <- as.integer(rep(seq(1, length(elefantes), length.out = 10), each = N))
+
+elefantes <- elefantes %>% 
+   as.data.frame() %>% 
+   as.data.table()
+
+
+ele_labs <- elefantes %>% 
+   .[, as.list(moments_n(1:3)(.SD)), by  = .metamer] %>% 
+   .[, label := label(c("M1" = x_1, "M2" = x_2, "M3" = x_3), c(5, 3, 3), 5), by = .metamer]
+
+
+ggplot(elefantes, aes(x, group = .metamer)) +
+   # geom_raster(data = elefante_bg, 
+   # aes(x, y, fill = value, alpha = .metamer)) +
+   geom_density(aes(y = ..scaled..), size = 1) + 
+   geom_richtext(data = ele_labs,
+                 label.r = unit(0.05, "lines"),
+                 family = hrbrthemes::font_rc,
+                 size = 5,
+                 aes(x = 2, y = 0.6, label = label)) +
+   scale_y_continuous("Densidad", 
+                      breaks = scales::pretty_breaks(n = 2)) +
+   scale_x_continuous(limits = c(-2.5, 3)) +
+   coord_cartesian(ylim = c(0, 1), clip = "off") +
+   scale_fill_gradient(low = "black", high = "white", guide = "none") +
+   scale_alpha(range = c(0, 1), guide = "none") +
+   # coord_fixed(ratio = 320/89) 
+   # transition_time(.metamer) +
+   transition_manual(.metamer) +
+   theme(panel.grid = element_blank(), strip.text = element_blank(),
+         aspect.ratio = 89/320) -> g
+
+file <- "Presentación/sombrero.gif"
+anim_save(file,  g, renderer = gifski_renderer(loop = FALSE),
+          duration = 5, fps = 20, 
+          width = 320*3, height = 89*3)
+
+
+N <- nrow(elefante_bg)
+elefante_bg <- elefante_bg[rep(seq_len(N), 2), ]
+elefante_bg$frame <- as.integer(rep(c(1, 2), each = N))
+
+
+ggplot(elefantes[.metamer == max(.metamer)], aes(x)) +
+   geom_raster(data = elefante_bg,
+               aes(x, y, fill = value, alpha = frame)) +
+   geom_density(aes(y = ..scaled..), size = 1) + 
+   geom_richtext(data = ele_labs[.metamer == max(.metamer)],
+                 label.r = unit(0.05, "lines"),
+                 family = hrbrthemes::font_rc,
+                 size = 5,
+                 aes(x = 2, y = 0.6, label = label)) +
+   scale_y_continuous("Densidad", 
+                      breaks = scales::pretty_breaks(n = 2)) +
+   scale_x_continuous(limits = c(-2.5, 3)) +
+   coord_cartesian(ylim = c(0, 1), clip = "off") +
+   scale_fill_gradient(low = "black", high = "white", guide = "none") +
+   scale_alpha(range = c(0, 1), guide = "none") +
+   transition_states(frame) +
+   # transition_manual(.metamer) +
+   theme(panel.grid = element_blank(), strip.text = element_blank(),
+         aspect.ratio = 89/320) -> g
+
+file <- "Presentación/sombrero_fin.gif"
+anim_save(file,  g, 
+          duration = 3, fps = 20,
+          width = 320*3, height = 89*3)
+
+
+
+
+
+energia <- function(data) {
+   with(data, c(h*9.8 + 1/2*v^2, 
+                h > 0))
+}
+
+altura <- function(data) {
+   data$h
+}
+
+
+
+condicion_inicial <- data.frame(h = 1, v = 0) 
+set.seed(42)
+estados_posibles  <- metamerize(condicion_inicial, 
+                                preserve = energia, 
+                                minimize = altura,
+                                N = 100000, 
+                                perturb = 0.5)
+
+estados_posibles %>% 
+   as.data.frame() %>% 
+   ggplot(aes(v, h)) +
+   geom_line()
+
+
+
+
+temperatura_potencial <- function(aire) {
+   with(aire, metR::Adiabat(presion*100, temperatura + 273.16))
+}
+presion <- function(aire) aire$presion
+
+aire <- data.frame(presion = 1013, temperatura = 15)
+adiabatica <- metamerize(aire, 
+                         preserve = temperatura_potencial,
+                         minimize = presion,
+                         perturbation = c(5, 0.1),
+                         signif = 3,
+                         N = 50000)
+
+
+ggplot(adiabatica, aes(temperatura, presion), n = 100) +
+   
+   stat_function(fun = function(x) Adiabat(t = x + 273.16, 
+                                           theta = temperatura_potencial(aire))/100,
+                 color = "red", size = 2) +
+   geom_point() +
+   scale_x_continuous("Temperatura (°C)") +
+   scale_y_continuous("Presión (hPa)") +
+   coord_trans(y = reverselog_trans())
+
+ggsave("Presentación/adiabatica.png", width = 8, height = 4)  
