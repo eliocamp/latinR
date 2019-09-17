@@ -10,14 +10,15 @@ library(datasauRus)
 
 
 
-theme_set(hrbrthemes::theme_ipsum_rc(base_size = 14))
+# theme_set(hrbrthemes::theme_ipsum_rc(base_size = 14))
 
+theme_set(ggthemes::theme_few(base_size = 14, base_family = hrbrthemes::font_rc))
 x = c(9, 3.323654, 7.50454, 2.035657, 0.81675)
 labs = c("Media X", "SD X", "Media Y", "SD Y", "Cor XY")
 digits <- 6
 signif <- c(4)
 
-label <- function(x, signif, digits, labs = names(x)) {
+label <- function(x, signif, digits, labs = names(x), dark = "black", light = "gray") {
    # browser()
    force(labs)
    format <- paste0("%.", digits, "f")
@@ -30,9 +31,9 @@ label <- function(x, signif, digits, labs = names(x)) {
    }
    
    x <- lapply(seq_along(x), function(i) {
-      paste0("<span style='color:black'>", 
+      paste0("<span style='color:", dark, "'>", 
              paste0(head(x[[i]], signif[i]), collapse = ""),
-             "</span><span style='color:gray'>",
+             "</span><span style='color:", light, "'>",
              paste0(tail(x[[i]], -signif[i]), collapse = ""),
              "</span>")
    })
@@ -108,9 +109,9 @@ anscombe <- anscombe %>%
    as.data.table() %>% 
    dcast(obs + quartet ~ coord) %>% 
    .[, quartet := c("I", "II", "III", "IV")[as.numeric(quartet)]]
-   
+
 anscombe %>% 
-dplyr::group_by(quartet) %>%
+   dplyr::group_by(quartet) %>%
    dplyr::summarize(
       n=n(),
       mean.x=round(mean(x),5), 
@@ -120,6 +121,7 @@ dplyr::group_by(quartet) %>%
       correlation=round(cor(x,y),5))
 
 ggplot(anscombe, aes(x, y)) +
+   geom_smooth(method = "lm", color = "#7700FF", se = FALSE) +
    geom_point() +
    geom_richtext(data = function(d) d[, .(label = label(c("Media X" = mean(x),
                                                           "SD X" = sd(x),
@@ -128,17 +130,22 @@ ggplot(anscombe, aes(x, y)) +
                                                           "Cor XY" = cor(x, y)),
                                                         signif = c(5), digits = 2)),
                                       by = quartet],
-                 # x = 25, y = 10, 
+                 label.r = unit(0.05, "lines"),
+                 # x = 25, y = 10,
                  # hjust = -0.5,
+                 # vjust = -0.5,
                  family = hrbrthemes::font_rc,
-                 size = 2,
-                 aes(x = 25, y = 10,label = label)) +
-   facet_wrap(~ quartet) +
-   coord_cartesian(clip = "off")
+                 size = 3.5,
+                 aes(x = 18, y = 4, label = label)) +
+   scale_x_continuous(limits = c(0, 20)) +
+   scale_y_continuous(limits = c(0, 13)) +
+   facet_wrap(~ quartet) 
+# ggthemes::geom_rangeframe() +
 
 
 
-ggsave("Presentación/anscombre.png", height = 4, width = 8)
+
+ggsave("Presentación/anscombre.png", height = 4.5, width = 8)
 
 # Datasaurio media -----------------
 
@@ -191,14 +198,14 @@ for (d in datasets[1:2]) {
                  perturbation = 0.06,
                  trim = 600,
                  name = d) %>% 
-   metamerize(preserve = preserv,
-              minimize = mean_dist_to(end),
-              # N = 80000,
-              N = 8000,
-              trim = 1600,
-              perturbation = 0.04,
-              signif = 4,
-              name = d)
+      metamerize(preserve = preserv,
+                 minimize = mean_dist_to(end),
+                 # N = 80000,
+                 N = 8000,
+                 trim = 1600,
+                 perturbation = 0.04,
+                 signif = 4,
+                 name = d)
 }
 
 
@@ -252,10 +259,87 @@ plot_spectrum <- function(object) {
 
 
 
-plot_spectrum("Blue")
 
-plot_spectrum("YellowBanana")
 
+g <- plot_spectrum("Blue") 
+
+g <- g + theme(plot.background = element_blank(), panel.background = element_blank())
+
+ggsave("Presentación/azul_espectro.png", g, height = 3, width = 4, bg = "transparent")
+
+g <- plot_spectrum("YellowBanana")
+
+ggsave("Presentación/banana_espectro.png",g,  height = 2, width = 2)
+
+
+
+color <- function(data) c(colorscience::spectra2XYZ(as.matrix(data)),
+                          data$Blue >= 0,
+                          sum(data$Blue))
+
+object <- "Blue"
+
+
+
+Blue <- as.data.frame(MaterialReferenceData[, c("wavelength", object)])
+
+
+Yellow <- as.data.frame(MaterialReferenceData[, c("wavelength", "Yellow")])
+
+blueish <- metamerize(Blue, 
+                      preserve = color,
+                      minimize = mean_dist_to(Yellow),
+                      # minimize = delayed_with(sd(Blue)),
+                      change = "Blue",
+                      signif = 3,
+                      N = 400000, 
+                      perturbation = 0.03,
+                      trim = 500)
+
+
+
+xyz2hex <- function(xyz) {
+   do.call(rgb, as.list(colorscience::XYZ2RGB(xyz)))
+}
+
+
+colors <- blueish %>% 
+   as.data.frame() %>% 
+   as.data.table() %>% 
+   .[, color := xyz2hex(color(.SD)[1:3]), by = .(.metamer)] 
+
+colors_RGB <- colors %>% 
+   .[, setNames(as.list(colorscience::XYZ2RGB(color(.SD)[1:3])),
+                c("R", "G", "B")),
+     by = .metamer, .SDcols = c("wavelength", "Blue")] %>% 
+   .[, label := label(c(Rojo = R, Verde = G, Azul = B), 
+                      4, 4, dark = "white", light = "gray"), by = .metamer]
+
+colors %>% 
+   as.data.frame() %>% 
+   as.data.table() %>% 
+   # .[.metamer == 1] %>% 
+   ggplot(aes(wavelength, Blue)) +
+   geom_line() +
+   geom_richtext(data = colors_RGB,
+                 inherit.aes = FALSE,
+                 x = 570, y = 30, 
+                 # hjust = -0.5,
+                 family = hrbrthemes::font_rc,
+                 size = 7,
+                 color = "white",
+                 aes(label = label, fill = rgb(R, G, B))) +
+   scale_x_continuous("Longitud de onda [nm]", limits = c(NA, NA)) +
+   scale_y_continuous("Espectro") +
+   scale_color_identity()  +
+   scale_fill_identity() +
+   transition_manual(.metamer) -> g
+
+
+
+anim_save("Presentación/colores_metameros.gif", g,
+          fps = 20,
+          width = 700, height = 500)
 
 
 # spfit --------
@@ -347,22 +431,23 @@ g <- metamers %>%
 set.seed(42)
 metamers <- metamerize(latinr,
                        preserve =  delayed_with(mean(x), mean(y)),
-                       # minimize = mean_dist_to(start_data),  
+                       minimize = mean_self_proximity,
                        signif = c(5, 4),
                        perturbation = 0.08, 
-                       N = 10000,
+                       N = 100000,
                        trim = 300) %>% 
-   metamerize(minimize = mean_dist_to(start_data),
-              preserve =  delayed_with(mean(x), mean(y)),
+   metamerize(minimize = c(mean_dist_to(start_data),
+                           mean_self_proximity),
               perturbation = 0.04,
               signif = c(5, 4),
               N = 300000,
               trim = 600) %>% 
    metamerize(perturbation = 0.08, 
-              minimize = NULL,
+              minimize = mean_self_proximity,
               N = 10000,
               trim = 300) %>% 
-   metamerize(minimize = mean_dist_to(latinr),
+   metamerize(minimize = c(mean_dist_to(latinr),
+                           mean_self_proximity),
               N = 300000,
               perturbation = 0.04,
               trim = 600)
@@ -403,3 +488,16 @@ dump <- lapply(1:3, function(i) {
 
 
 
+
+metamers <- metamerize(latinr,
+                       preserve     =  delayed_with(mean(x), mean(y)),
+                       minimize     = c(mean_dist_to(dino),
+                                        mean_self_proximity),
+                       signif       = c(5, 4),
+                       perturbation = 0.04, 
+                       N            = 300000,
+                       trim         = 600) %>% 
+   metamerize(minimize = c(mean_dist_to(latinr),
+                           mean_self_proximity),
+              N        = 300000,
+              trim     = 600)
