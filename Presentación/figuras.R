@@ -291,8 +291,8 @@ blueish <- metamerize(Blue,
                       minimize = mean_dist_to(Yellow),
                       # minimize = delayed_with(sd(Blue)),
                       change = value,
-                      signif = 3,
-                      N = 800000, 
+                      signif = 2,
+                      N = 80000, 
                       perturbation = 0.03,
                       trim = 500)
 
@@ -305,6 +305,19 @@ xyz2hex <- function(xyz) {
 plot_spectrum("Blue")
 
 plot_spectrum("Yellow")
+
+blueish[[length(blueish)]] %>% 
+   as.data.table() %>% 
+   [wavelength %between% c(380, 700)] %>% 
+   .[, color := wavelength_to_rgb(wavelength), by = wavelength] %>% 
+   ggplot(aes(wavelength, Blue)) +
+   geom_line(aes(color = color, group = 1), size = 2) +
+   # geom_col(aes(fill = color)) +
+   scale_x_continuous("Longitud de onda [nm]", limits = c(NA, 700)) +
+   scale_y_continuous("Espectro") +
+   scale_color_identity() +
+   scale_fill_identity()
+
 
 colors <- blueish %>% 
    as.data.frame() %>% 
