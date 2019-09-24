@@ -308,7 +308,7 @@ plot_spectrum("Yellow")
 
 blueish[[length(blueish)]] %>% 
    as.data.table() %>% 
-   [wavelength %between% c(380, 700)] %>% 
+   .[wavelength %between% c(380, 700)] %>% 
    .[, color := wavelength_to_rgb(wavelength), by = wavelength] %>% 
    ggplot(aes(wavelength, Blue)) +
    geom_line(aes(color = color, group = 1), size = 2) +
@@ -316,7 +316,12 @@ blueish[[length(blueish)]] %>%
    scale_x_continuous("Longitud de onda [nm]", limits = c(NA, 700)) +
    scale_y_continuous("Espectro") +
    scale_color_identity() +
-   scale_fill_identity()
+   scale_fill_identity() -> g
+
+
+g <- g + theme(plot.background = element_blank(), panel.background = element_blank())
+
+ggsave("Presentación/azul_metamero.png", g, height = 3, width = 4, bg = "transparent")
 
 
 colors <- blueish %>% 
@@ -469,14 +474,20 @@ metamers <- metamerize(latinr,
               trim = 600)
 
 
+metamers %>% 
+   ggplot(aes(x, y)) +
+   geom_point()  +
+   transition_manual(.metamer) 
 
 metamers %>% 
    as.data.frame() %>% 
    as.data.table() %>% 
    # subset(.metamer %in% c(1, 10, 40, 60)) %>% 
+   # .[.metamer == 1] %>% 
    ggplot(aes(x, y)) +
    geom_point()  +
-   geom_richtext(data = function(d) d[, .(label = label(mean(x), mean(y))), 
+   geom_richtext(data = function(d) d[, .(label = label(c("Media X" = mean(x),
+                                                          "Media Y" = mean(y)), c(5, 4), 5)), 
                                       by = .metamer],
                  x = 85, y = 90, 
                  family = hrbrthemes::font_rc,
